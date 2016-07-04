@@ -13,7 +13,13 @@
     The parameter LEVEL determines that (invariant) rank this instance
     has on the ruler.
 
-    The output in particular has the success flag.
+    The output 'nextEnabled' indicates the opinion of the current
+    enabled mark what mark should be allowed to perform the next
+    computation.
+
+    The output in particular has the success flag to indicate when a
+    valid golomb ruler was found. If it is optimal we will only know
+    at the very end.
 
  */
 
@@ -39,10 +45,6 @@ module mark_counter_leaf #(
    output reg success // out
 );
 
-// parameter /*[8:0]*/ LEVEL=1;
-// parameter /*[8:0]*/ MAXVALUE=500;
-// parameter /*[8:0]*/ NUMPOSITIONS=5;
-
 reg good;
 reg [6:0] i;
 reg [8:0] d;
@@ -50,8 +52,6 @@ reg [8:0] d;
 // interim distances in leaf, not sent back as output
 reg [0:MAXVALUE] pdHash;
 
-//output
-//reg [(NUMPOSITIONS*9):1] marks_out;
 reg [8:0] m[0:NUMPOSITIONS];
 
 reg carry;
@@ -108,18 +108,23 @@ always @(*) begin
             end
             /**/
 
+            /*
+	    // Optional display of internal state
             if (good) begin
                // we can continue
-               //$display("I(%0d): ** action, val==%0d (leaf)",LEVEL, val);
+               $display("I(%0d): ** action, val==%0d (leaf)",LEVEL, val);
             end else begin
                // no action since conflicts with distances
-               //$display("I(%0d): NO action, val==%0d (leaf)",LEVEL, val);
+               $display("I(%0d): NO action, val==%0d (leaf)",LEVEL, val);
             end
+	    */
             success=good; // here see a single change of 'return value'
 				
             nextEnabled = LEVEL; // we stay at this module if tests fail or not
 
          end else begin
+            // we have reached beyond the limit and thus have to find better
+            // values at th earlier marks
             nextEnabled = LEVEL-1'b1;
             //$display("I(%0d): action, val==%0d (leaf), level up to %d",LEVEL, val, nextEnabled);
             val=0;
@@ -127,12 +132,12 @@ always @(*) begin
 
          //$display("I(%0d): val=%0d, nextEnabled == %0d (leaf)",LEVEL,val,nextEnabled);
 			
-         m[LEVEL]=val;
+         m[LEVEL]=val; // this is the current mark and thus communicated to the assembly module.
 		
       end
-		
-		ready <= 1;
-		
+
+      ready <= 1;
+
    end
 	
 end

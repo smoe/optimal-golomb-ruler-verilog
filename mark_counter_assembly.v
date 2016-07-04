@@ -19,9 +19,6 @@
 // Revision 0.01 - File Created
 // Additional Comments: 
 //
-//////////////////////////////////////////////////////////////////////////////////
-
-
 /**
 
  This module constructs the complete ruler from a series of marks, here implemented by the name mark_counter. There is a special mark for the start (mark_counter_head), the middle marks (mark_counter_center) and the tail (mark_counter_leaf). The number of marks on the rules is determined by an externally set parameter NUMPOSITIONS. The maximal length of the rules is constrained by MAXVALUE. The basic idea of the algorithm is that whenever any of the marks attempts to position itself at a position higher than that value, or (and this is already an optimisation), if it is forseeable that the remainig number of positions need more ruler-estate than there is available, then a new position of an earlier marker needs to be found. That "remaining space" information is indicated by the 'optiRuler' array, i.e. the best results yet known.
@@ -38,9 +35,11 @@ The following may be the only trick in the whole FPGA golomb bits - it is easy t
 
 To further help the comparison, the wire distances is created as the logical or of all the individual pairdistsHash entries. Any pairdistsHash position that should not be considered needs to be 0ed out. The 'distances' and the particular entry of the 'pairdistsHash' are passed to the individual mark counter modules to update the values and check for consequences.
 
- The construction of ruler involves the instantiation of the mark counter head (the one remaining at position 0), many regular mark counters in the middle and finally as single mark counter leaf.
+The construction of ruler involves the instantiation of the mark counter head (the one remaining at position 0), many regular mark counters in the middle and finally as single mark counter leaf. The single active mark is indicate by the register value 'enabled'. Every mark returns the position of the mark that it thinks should be allowed to change its value next. The only opinion that counts is the one of the node that is currently enabled, as in 'enabled=next_enabled[enabled]'. Once the whole subtree was evaluated, the flag 'done' is set.
  
  */
+//
+//////////////////////////////////////////////////////////////////////////////////
 
 module mark_counter_assembly #(
    parameter /*[8:0]*/ MAXVALUE=22,
@@ -60,9 +59,6 @@ module mark_counter_assembly #(
 wire RESET;
 assign RESET = RESET_IN;
 
-//parameter /*[8:0]*/ MAXVALUE=22;	 
-//parameter /*[6:0]*/ NUMPOSITIONS=5;
-//parameter /*[5:0]*/ NUMRESULTS=10;
 reg [8:0] minlength;
 reg [8:0] newminlength;
 
@@ -111,14 +107,6 @@ wire good; // indicates success or failure at leaf node
 
 reg [8:0] optiRuler[0:30];
 reg carry;
-
-
-/*
-reg [8:0] i; // for result presentation
-for (i=0; i<NUMPOSITIONS; i=i+1) begin
-	assign distances=pairdistsHash[i];
-end
-*/
 
 initial begin
    $monitor("Zeit:%t Takt:%b reset:%b enabled:%0d m:(%0d,%0d,%0d,%0d,%0d)",
@@ -210,7 +198,7 @@ always @(posedge clock or posedge RESET) begin
            end
            r[numResults]=marks; // results handling
         end
-        enabled=next_enabled[enabled];
+        enabled=next_enabled[enabled]; // magic
         if (enabled<firstvariableposition) begin
            $display("I: assembly: m[0..4]: %0d-%0d-%0d-%0d-%0d",m[0],m[1],m[2],m[3],m[4]);
            $display("I: %d == enabled<firstvariableposition ==%d, completed.",enabled,firstvariableposition);

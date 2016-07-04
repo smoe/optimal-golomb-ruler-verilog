@@ -2,7 +2,7 @@
 
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
-// Engineer: 
+// Engineer:       Steffen Moeller
 // 
 // Create Date:    14:06:05 09/22/2012 
 // Design Name: 
@@ -18,6 +18,16 @@
 // Revision 0.01 - File Created
 // Additional Comments: 
 //
+/**
+
+This module was only prepared to allow the simulation of the process.
+The current marker positions are in 'marks', the preset ones in 'firstvalues'.
+The best solutions found will be returned in 'results'.
+
+This functionality is about what would need to be recreated for the
+communication with a host system for a real FPGA.
+
+ */
 //////////////////////////////////////////////////////////////////////////////////
 module mark_counter_tb;
 

@@ -8,8 +8,16 @@
     The input 'enabled' specifies the single counter of the many that
     make up the ruler that may change its position, i.e. that is active.
     The parameter LEVEL determines that (invariant) rank this instance
-    has on the ruler.
+    has on the ruler. It is set at generation time in the mark_assembly
+    module.
 
+    Communicated back are the mark that shall be 'nextEnabled' and the
+    value that it should first test goes to 'nextStartValue'. The mutual
+    distances observed so far are in 'distances' and the newly added
+    distances are communicated back in 'pdHash'.
+
+    The disassembly of the marks_in array is accredited to different
+    flavours of verilog. Not all allow an array of bitarrays to be passed.
  */
 
 module mark_counter #(
@@ -32,24 +40,13 @@ module mark_counter #(
    input wire [((NUMPOSITIONS+1)*9):1] marks_in
 );
 
-//parameter /*[8:0]*/ LEVEL=1;
-//parameter /*[8:0]*/ MAXVALUE=500; // effective operationally is 'minlength'
-//parameter /*[8:0]*/ NUMPOSITIONS=5;
-
 reg good;
 reg [6:0] i;
 reg [8:0] d;
 
-//output
-//reg [((NUMPOSITIONS+1)*9):1] marks_out;
 reg [8:0] m[0:NUMPOSITIONS]; // m[0]==0
 
 reg carry;
-
-/*
-always @(negedge reset or val or marks_in) begin
-end
-*/
 
 always @(posedge clock) begin
 
@@ -63,7 +60,7 @@ always @(posedge clock) begin
       ready<=0;
 
       if (1'bx !== m[LEVEL]) begin
-	
+
          good=1;
          pdHash=0; // ISE error: is connected to following multiple drivers
          if (val>0) begin
@@ -85,12 +82,12 @@ always @(posedge clock) begin
          end // if val
       end
 
-	   ready<=1;
+      ready<=1;
 
    end else begin
-	
+
       ready<=0;
-	
+
       if (enabled==LEVEL) begin	
 
          if (0 == LEVEL) begin
@@ -101,7 +98,7 @@ always @(posedge clock) begin
          {m[0],m[1],m[2],m[3],m[4],m[5]}=marks_in; // extend to include m[NUMPOSITIONS]
 
          //$display("I(%0d): Enabled mark counter, val=%0d, startvalue=%0d",LEVEL,val, startvalue);
-		   // setting value
+         // setting value
          if (0==val) begin
             {val} = startvalue;
          end else begin
@@ -129,7 +126,7 @@ always @(posedge clock) begin
                end
             end
             /**/
-				
+
             {carry,nextStartValue} = val + 1'b1; // val was already increased
             if (good) begin
                // we can continue with the level below
@@ -155,15 +152,15 @@ always @(posedge clock) begin
          end
 
          //$display("I(%0d): val=%0d, nextEnabled == %0d",LEVEL,val,nextEnabled);
-			
+
          m[LEVEL]=val;
       end else begin
          //$display("I(%0d): clock=%0d, enabled=%0d",LEVEL,clock,enabled);
       end
 
-    	ready <= 1;
+      ready <= 1;
 	
-	end
+   end
 	
 end
 
