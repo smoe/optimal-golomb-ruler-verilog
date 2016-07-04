@@ -67,92 +67,100 @@ install iverilog and run "make test" which performs a quick
 exhaustive search for OGR with 5 marks.
 
 <pre>
-time ./mark
-I(0): Reset of mark counter, val=0
-I(5): Reset of mark counter (leaf), val=x, startvalue=x
-I(5): Reset of mark counter (leaf), val=0, startvalue=x
-Zeit:                   0 Takt:0 reset:1 m: 0-x-x-x-x-0
-I(4): Reset of mark counter, val=x, startvalue=x
-I(3): Reset of mark counter, val=x, startvalue=x
-I(2): Reset of mark counter, val=x, startvalue=x
-I(1): Reset of mark counter, val=x, startvalue=1
-I(1): Initialising distances, m: 0-1-0-0-0-0
-I(1): distance set (d=1,i=0,val=1,m[i]=0)
-I(5): Reset of mark counter (leaf), val=0, startvalue=x
-Zeit:                 150 Takt:1 reset:1 m: 0-1-0-0-0-0
-I(5): Reset of mark counter (leaf), val=0, startvalue=x
-Zeit:                 300 Takt:0 reset:1 m: 0-1-0-0-0-0
-I(1): Reset of mark counter, val=1, startvalue=1
-I(1): Initialising distances, m: 0-1-0-0-0-0
-I(1): distance set (d=1,i=0,val=1,m[i]=0)
-I(2): Reset of mark counter, val=0, startvalue=2
-I(3): Reset of mark counter, val=0, startvalue=3
-I(4): Reset of mark counter, val=0, startvalue=4
-I(5): Reset of mark counter (leaf), val=0, startvalue=5
-Zeit:                 450 Takt:1 reset:1 m: 0-1-0-0-0-0
-I: Reset now set to 0
-Zeit:                 500 Takt:1 reset:0 m: 0-1-0-0-0-0
-Zeit:                 600 Takt:0 reset:0 m: 0-1-0-0-0-0
-I: Moving enabled from 2 to 2
-Zeit:                 750 Takt:1 reset:0 m: 0-1-2-0-0-0
-Zeit:                 900 Takt:0 reset:0 m: 0-1-2-0-0-0
-I: Moving enabled from 2 to 2
-Zeit:                1050 Takt:1 reset:0 m: 0-1-3-0-0-0
-Zeit:                1200 Takt:0 reset:0 m: 0-1-3-0-0-0
-I: Moving enabled from 2 to 3
+   time ./mark
+   I(0): Reset of mark counter, val=0
+   I(5): Reset of mark counter (leaf), val=x, startvalue=x
+   I(5): Reset of mark counter (leaf), val=0, startvalue=x
+   Zeit:                   0 Takt:0 reset:1 m: 0-x-x-x-x-0
+   I(4): Reset of mark counter, val=x, startvalue=x
+   I(3): Reset of mark counter, val=x, startvalue=x
+   I(2): Reset of mark counter, val=x, startvalue=x
+   I(1): Reset of mark counter, val=x, startvalue=1
+   I(1): Initialising distances, m: 0-1-0-0-0-0
+   I(1): distance set (d=1,i=0,val=1,m[i]=0)
+   I(5): Reset of mark counter (leaf), val=0, startvalue=x
+   Zeit:                 150 Takt:1 reset:1 m: 0-1-0-0-0-0
+   I(5): Reset of mark counter (leaf), val=0, startvalue=x
+   Zeit:                 300 Takt:0 reset:1 m: 0-1-0-0-0-0
+   I(1): Reset of mark counter, val=1, startvalue=1
+   I(1): Initialising distances, m: 0-1-0-0-0-0
+   I(1): distance set (d=1,i=0,val=1,m[i]=0)
+   I(2): Reset of mark counter, val=0, startvalue=2
+   I(3): Reset of mark counter, val=0, startvalue=3
+   I(4): Reset of mark counter, val=0, startvalue=4
+   I(5): Reset of mark counter (leaf), val=0, startvalue=5
+   Zeit:                 450 Takt:1 reset:1 m: 0-1-0-0-0-0
+   I: Reset now set to 0
+   Zeit:                 500 Takt:1 reset:0 m: 0-1-0-0-0-0
+   Zeit:                 600 Takt:0 reset:0 m: 0-1-0-0-0-0
+   I: Moving enabled from 2 to 2
+   Zeit:                 750 Takt:1 reset:0 m: 0-1-2-0-0-0
+   Zeit:                 900 Takt:0 reset:0 m: 0-1-2-0-0-0
+   I: Moving enabled from 2 to 2
+   Zeit:                1050 Takt:1 reset:0 m: 0-1-3-0-0-0
+   Zeit:                1200 Takt:0 reset:0 m: 0-1-3-0-0-0
+   I: Moving enabled from 2 to 3
+</pre>
+
 ...
-: Moving enabled from 5 to 5
-Zeit:                5550 Takt:1 reset:0 m: 0-1-3-7-12-18
-Zeit:                5700 Takt:0 reset:0 m: 0-1-3-7-12-18
-I: Moving enabled from 5 to 5
-Zeit:                5850 Takt:1 reset:0 m: 0-1-3-7-12-19
-Zeit:                6000 Takt:0 reset:0 m: 0-1-3-7-12-19
-I: Moving enabled from 5 to 5
-Zeit:                6150 Takt:1 reset:0 m: 0-1-3-7-12-20
-Zeit:                6300 Takt:0 reset:0 m: 0-1-3-7-12-20
-I: Moving enabled from 5 to 5
-************ GOOD FOR 0-1-3-7-12-20 ****************
-Zeit:                6450 Takt:1 reset:0 m: 0-1-3-7-12-0
-Zeit:                6600 Takt:0 reset:0 m: 0-1-3-7-12-0
-I: Moving enabled from 5 to 4
-Zeit:                6750 Takt:1 reset:0 m: 0-1-3-7-13-0
-Zeit:                6900 Takt:0 reset:0 m: 0-1-3-7-13-0
-I: Moving enabled from 4 to 4
+
+<pre>
+   : Moving enabled from 5 to 5
+   Zeit:                5550 Takt:1 reset:0 m: 0-1-3-7-12-18
+   Zeit:                5700 Takt:0 reset:0 m: 0-1-3-7-12-18
+   I: Moving enabled from 5 to 5
+   Zeit:                5850 Takt:1 reset:0 m: 0-1-3-7-12-19
+   Zeit:                6000 Takt:0 reset:0 m: 0-1-3-7-12-19
+   I: Moving enabled from 5 to 5
+   Zeit:                6150 Takt:1 reset:0 m: 0-1-3-7-12-20
+   Zeit:                6300 Takt:0 reset:0 m: 0-1-3-7-12-20
+   I: Moving enabled from 5 to 5
+   ************ GOOD FOR 0-1-3-7-12-20 ****************
+   Zeit:                6450 Takt:1 reset:0 m: 0-1-3-7-12-0
+   Zeit:                6600 Takt:0 reset:0 m: 0-1-3-7-12-0
+   I: Moving enabled from 5 to 4
+   Zeit:                6750 Takt:1 reset:0 m: 0-1-3-7-13-0
+   Zeit:                6900 Takt:0 reset:0 m: 0-1-3-7-13-0
+   I: Moving enabled from 4 to 4
+</pre>
+
 ...
-Zeit:              185250 Takt:1 reset:0 m: 0-1-11-14-0-0
-Zeit:              185400 Takt:0 reset:0 m: 0-1-11-14-0-0
-I: Moving enabled from 3 to 4
-Zeit:              185550 Takt:1 reset:0 m: 0-1-11-14-15-0
-Zeit:              185700 Takt:0 reset:0 m: 0-1-11-14-15-0
-I: Moving enabled from 4 to 4
-Zeit:              185850 Takt:1 reset:0 m: 0-1-11-14-16-0
-Zeit:              186000 Takt:0 reset:0 m: 0-1-11-14-16-0
-I: Moving enabled from 4 to 5
-Zeit:              186150 Takt:1 reset:0 m: 0-1-11-14-16-17
-Zeit:              186300 Takt:0 reset:0 m: 0-1-11-14-16-17
-I: Moving enabled from 5 to 5
-Zeit:              186450 Takt:1 reset:0 m: 0-1-11-14-16-0
-Zeit:              186600 Takt:0 reset:0 m: 0-1-11-14-16-0
-I: Moving enabled from 5 to 4
-Zeit:              186750 Takt:1 reset:0 m: 0-1-11-14-0-0
-Zeit:              186900 Takt:0 reset:0 m: 0-1-11-14-0-0
-I: Moving enabled from 4 to 3
-Zeit:              187050 Takt:1 reset:0 m: 0-1-11-0-0-0
-Zeit:              187200 Takt:0 reset:0 m: 0-1-11-0-0-0
-I: Moving enabled from 3 to 2
-Zeit:              187350 Takt:1 reset:0 m: 0-1-0-0-0-0
-Zeit:              187500 Takt:0 reset:0 m: 0-1-0-0-0-0
-I: Moving enabled from 2 to 1
-I: assembly: m[0..4]: 0-1-0-0-0
-I:   1 == enabled<firstvariableposition ==  2, completed.
-I: Found 4 results.
-I: Result 1:   1-4-10-12-17  x
-I: Result 2:   1-4-10-15-17  x
-I: Result 3:   1-8-11-13-17  x
-I: Result 4:   1-8-12-14-17  x
-Zeit:              187650 Takt:1 reset:0 m: 0-2-0-0-0-0
-0.02user 0.00system 0:00.05elapsed 54%CPU (0avgtext+0avgdata 7068maxresident)k
-0inputs+0outputs (0major+741minor)pagefaults 0swaps
+
+<pre>
+   Zeit:              185250 Takt:1 reset:0 m: 0-1-11-14-0-0
+   Zeit:              185400 Takt:0 reset:0 m: 0-1-11-14-0-0
+   I: Moving enabled from 3 to 4
+   Zeit:              185550 Takt:1 reset:0 m: 0-1-11-14-15-0
+   Zeit:              185700 Takt:0 reset:0 m: 0-1-11-14-15-0
+   I: Moving enabled from 4 to 4
+   Zeit:              185850 Takt:1 reset:0 m: 0-1-11-14-16-0
+   Zeit:              186000 Takt:0 reset:0 m: 0-1-11-14-16-0
+   I: Moving enabled from 4 to 5
+   Zeit:              186150 Takt:1 reset:0 m: 0-1-11-14-16-17
+   Zeit:              186300 Takt:0 reset:0 m: 0-1-11-14-16-17
+   I: Moving enabled from 5 to 5
+   Zeit:              186450 Takt:1 reset:0 m: 0-1-11-14-16-0
+   Zeit:              186600 Takt:0 reset:0 m: 0-1-11-14-16-0
+   I: Moving enabled from 5 to 4
+   Zeit:              186750 Takt:1 reset:0 m: 0-1-11-14-0-0
+   Zeit:              186900 Takt:0 reset:0 m: 0-1-11-14-0-0
+   I: Moving enabled from 4 to 3
+   Zeit:              187050 Takt:1 reset:0 m: 0-1-11-0-0-0
+   Zeit:              187200 Takt:0 reset:0 m: 0-1-11-0-0-0
+   I: Moving enabled from 3 to 2
+   Zeit:              187350 Takt:1 reset:0 m: 0-1-0-0-0-0
+   Zeit:              187500 Takt:0 reset:0 m: 0-1-0-0-0-0
+   I: Moving enabled from 2 to 1
+   I: assembly: m[0..4]: 0-1-0-0-0
+   I:   1 == enabled<firstvariableposition ==  2, completed.
+   I: Found 4 results.
+   I: Result 1:   1-4-10-12-17  x
+   I: Result 2:   1-4-10-15-17  x
+   I: Result 3:   1-8-11-13-17  x
+   I: Result 4:   1-8-12-14-17  x
+   Zeit:              187650 Takt:1 reset:0 m: 0-2-0-0-0-0
+   0.02user 0.00system 0:00.05elapsed 54%CPU (0avgtext+0avgdata 7068maxresident)k
+   0inputs+0outputs (0major+741minor)pagefaults 0swaps
 </pre>
 
 The results are identical with what Wikipedia says for rulers of length 6.
@@ -163,15 +171,16 @@ as the 2.4 Tree Algorithm with a few of the optimisations also implemented.
 
 The invidividual source files offer a description of how they are working:
 
-<pre>
-mark_counter_tb.v         - Testbed
-mark_clock_gen.v          - Module providing a clock
-mark_counter_assembly.v   - Module forming the ruler, i.e. a collection of individual marks
-mark_counter.v            - Module representing a regular mark on the ruler
-mark_counter_leaf.v       - Module representing the final mark on the ruler
-mark_counter_head.v       - Module representing the very first mark on the ruler, i.e. position 0
-</pre>
-
+<table>
+<tr><th>File></th>                  <th>Description</th></tr>
+<tr><td>mark_counter_tb.v      </td><td>Testbed</td></tr>
+<tr><td>mark_clock_gen.v       </td><td>Module providing a clock</td></tr>
+<tr><td>mark_counter_assembly.v</td><td>Module forming the ruler, i.e. a collection of individual marks</td></tr>
+<tr><td>mark_counter.v         </td><td>Module representing a regular mark on the ruler</td></tr>
+<tr><td>mark_counter_leaf.v    </td><td>Module representing the final mark on the ruler</td></tr>
+<tr><td>mark_counter_head.v    </td><td>Module representing the very first mark on the ruler, i.e. position 0</td></tr>
+</table>
 -- 
- Steffen Moeller, 8/2012 to 7/2016
+ Steffen Möller, 8/2012 to 7/2016
+ 
  Niendorf/Ostsee, Germany
