@@ -172,13 +172,13 @@ as the 2.4 Tree Algorithm with a few of the optimisations also implemented.
 The invidividual source files offer a description of how they are working:
 
 <table>
-<tr><th>File></th>                  <th>Description</th></tr>
-<tr><td>mark_counter_tb.v      </td><td>Testbed</td></tr>
-<tr><td>mark_clock_gen.v       </td><td>Module providing a clock</td></tr>
+<tr><th>File</th>                  <th>Description</th></tr>
+<tr><td>mark_counter_tb.v</td>      <td>Testbed</td></tr>
+<tr><td>mark_clock_gen.v</td>       <td>Module providing a clock</td></tr>
 <tr><td>mark_counter_assembly.v</td><td>Module forming the ruler, i.e. a collection of individual marks</td></tr>
-<tr><td>mark_counter.v         </td><td>Module representing a regular mark on the ruler</td></tr>
-<tr><td>mark_counter_leaf.v    </td><td>Module representing the final mark on the ruler</td></tr>
-<tr><td>mark_counter_head.v    </td><td>Module representing the very first mark on the ruler, i.e. position 0</td></tr>
+<tr><td>mark_counter.v</td>         <td>Module representing a regular mark on the ruler</td></tr>
+<tr><td>mark_counter_leaf.v</td>    <td>Module representing the final mark on the ruler</td></tr>
+<tr><td>mark_counter_head.v</td>    <td>Module representing the very first mark on the ruler, i.e. position 0</td></tr>
 </table>
 -- 
  Steffen Möller, 8/2012 to 7/2016
