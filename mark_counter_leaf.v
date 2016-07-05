@@ -57,7 +57,7 @@ reg [8:0] m[0:NUMPOSITIONS];
 reg carry;
 
 
-always @(*) begin
+always @(posedge clock) begin
 
    if (reset) begin
 
