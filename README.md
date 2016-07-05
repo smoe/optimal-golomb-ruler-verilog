@@ -166,7 +166,8 @@ exhaustive search for OGR with 5 marks.
 The results are identical with what Wikipedia says for rulers of length 6.
 
 The implementation I found to be about the same as described in
-http://people.ee.duke.edu/~wrankin/golomb/golomb_paper.pdf
+  William  T.  Rankin,  Optimal  Golomb  Rulers:   An  exhaustive  parallel search implementation, M.S. thesis, Duke University, 1993.
+  (formerly seen at http://people.ee.duke.edu/~wrankin/golomb/golomb_paper.pdf, now as www.mathpuzzle.com/MAA/30-Rulers%20and%20Arrays/Golomb/rankin93optimal.ps)
 as the 2.4 Tree Algorithm with a few of the optimisations also implemented.
 
 The invidividual source files offer a description of how they are working:
