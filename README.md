@@ -192,6 +192,7 @@ References
 
  * Euripdes Sotiriades, Apostolos Dollas, Peter Athanas (2000) "Hardware-Software Codesign and Parallel Implementation of a Golomb Ruler Derivation Engine", in Proceedings of the 2000 IEEE Symposium on Field-Programmable Custom Computing Machines. https://www.computer.org/csdl/proceedings/fccm/2000/0871/00/08710227.pdf
  * Kiriakos Simon Mountakis (2000) "Parallel search for optimal Golomb rulers"
+
 -- 
  Steffen Möller, 8/2012 to 7/2016
  
