@@ -4,11 +4,16 @@ optimal-golomb-ruler-verilog
 The Optimal Golomb Rulers (OGR) as a challenge were motivated by
 the cognate http://distributed.net project.  The OGR problem appeals
 for its simplicity and its awareness from the distributed computing
-community.
+community. There are earlier efforts to accelerate OGR computing
+with FPGA, also with a reference to distributed comuting (Sotiriades and Athana, 2000), 
+and yet, these efforts have (other than the employment of FPGA for e.g. bitcoin mining) not become mainstream.
+A general overview on algorithms and accelerators is also provided
+by Mountakis in 2010.
 
-Besides finding more optimal rulers, this project sets out to prepare
-low-budget FPGA for application acceleration in distributed computing.
-As such it aims at using a single source tree for the generation
+
+So, besides finding more optimal rulers, this project sets out to prepare
+low-budget FPGA for application acceleration in distributed computing
+in general. As such it aims at using a single source tree for the generation
 of readily synthesisable FPGA code for a range of FPGA boards.
 
 The difficulty is to get the technology into many households. And
@@ -181,6 +186,13 @@ The invidividual source files offer a description of how they are working:
 <tr><td>mark_counter_leaf.v</td>    <td>Module representing the final mark on the ruler</td></tr>
 <tr><td>mark_counter_head.v</td>    <td>Module representing the very first mark on the ruler, i.e. position 0</td></tr>
 </table>
+
+References
+----------
+
+ * Euripdes Sotiriades, Apostolos Dollas, Peter Athanas (2000) "Hardware-Software Codesign and Parallel Implementation of a Golomb Ruler Derivation Engine", in Proceedings of the 2000 IEEE Symposium on Field-Programmable Custom Computing Machines. https://www.computer.org/csdl/proceedings/fccm/2000/0871/00/08710227.pdf
+ * Kiriakos Simon Mountakis (2000) "Parallel search for optimal Golomb rulers"
+
 -- 
  Steffen Möller, 8/2012 to 7/2016
  
