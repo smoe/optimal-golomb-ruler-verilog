@@ -7,6 +7,9 @@ mark: $(SOURCES)
 test: mark
 	time ./mark
 
+README.html: README.md
+	markdown_py README.md > README.html
+
 mark_yosys blif:  $(SOURCES)
 	yosys -q -p "synth_ice40 -blif mark_yosys" $(SOURCES)
 	
