@@ -113,8 +113,8 @@ initial begin
             $time, clock, RESET, enabled,
             m[0],m[1],m[2],m[3],m[4],m[5]);
    $monitor("Distances: %b",distances);
-   assign done=0;
-   enabled=firstvariableposition;
+   done    <= 0;
+   enabled <= firstvariableposition;
 end
 
 
@@ -141,7 +141,7 @@ generate
    end // for
 endgenerate
 
-// when extending, do not copy this last one, but the second-but-last one from above
+// The single leaf marker is at the end of the tree
 mark_counter_leaf #(
       NUMPOSITIONS,MAXVALUE,NUMPOSITIONS
    ) mcFinal (
@@ -202,7 +202,7 @@ always @(posedge clock or posedge RESET) begin
         if (enabled<firstvariableposition) begin
            $display("I: assembly: m[0..4]: %0d-%0d-%0d-%0d-%0d",m[0],m[1],m[2],m[3],m[4]);
            $display("I: %d == enabled<firstvariableposition ==%d, completed.",enabled,firstvariableposition);
-           assign done=1;
+           done <= 1;
         end
      end
    end else if (clock && !ready) begin
