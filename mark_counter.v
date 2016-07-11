@@ -149,6 +149,7 @@ always @(posedge clock) begin
             {val}=0;
             {carry,nextEnabled} = enabled-1'b1;
             pdHash=0; // when trying upper level, this should not be affected by past distances of later marks
+            //$display(pdHash);
          end
 
          //$display("I(%0d): val=%0d, nextEnabled == %0d",LEVEL,val,nextEnabled);
