@@ -6,7 +6,7 @@ the cognate http://distributed.net project.  The OGR problem appeals
 for its simplicity and its awareness from the distributed computing
 community. There are earlier efforts to accelerate OGR computing
 with FPGA, also with a reference to distributed comuting (Sotiriades and Athana, 2000), 
-and yet, these efforts have (other than the employment of FPGA for e.g. bitcoin mining) not become mainstream.
+and yet, these efforts have (other than the employment of FPGA for e.g. bitcoin mining) never become mainstream.
 A general overview on algorithms and accelerators is also provided
 by Mountakis in 2010.
 
@@ -31,7 +31,7 @@ for the LX75 it uses no more than 15% of its resources.
 A very first implementation was insensibly loaded with nested
 for loops and many thanks go to my then colleagues next door at the
 University of Luebeck, i.e. especially to Thilo Piontec for a brain reset,
-to Eric Maehle, Volker Hampel and Steffen Prehn for the access to their
+to Erik Maehle, Volker Hampel and Steffen Prehn for the access to their
 Xilinx suite. The early bioinformatics products of TimeLogic is thanked
 for the general awareness of hardware acceleration. And yes, of course,
 I hope for the emergence of a series of Open Source solutions for
@@ -40,7 +40,7 @@ Stefan Ziegenbalg of ztex.de also helped a lot to get me going with
 one of his USB-FPGA modules.
 
 This project yet is a mere technical and social exercise.
-It shall not compete with the distributed.net effort but speed it up.
+It shall eventually not compete with the distributed.net effort but speed it up.
 There is already the BOINC project Yoyo@Home which wraps the original
 distributed.net client. And similarly one
 could have an FPGA-aware BOINC (Berkeley Open Infrastructure for 
@@ -49,7 +49,7 @@ or from where to download, a bitstream to fit the attached accelerator.
 
 So this project aims at:
  * gathering feedback on an the OGR implementation per se
- * find ways to implement the OGR seach on the very low budget FPGA
+ * find ways to implement the OGR search on the very low budget FPGA
    available that can also be programmed with Open Source tools
  * collect adaptor code for many different FPGA platforms
  * render BOINC FPGA-aware
@@ -64,6 +64,8 @@ Xilinx chips via the
 and others for the one shipped by Lattice Semiconductors
   fpga-icestorm   http://www.clifford.at/icestorm/
 These are all available as Debian/Ubuntu/Mint Linux packages.
+An overview is provided on 
+https://wiki.debian.org/FPGA .
 
 This first upload from my Dropbox to github does not feature any
 bitstreams. It is meant to allow my immediate peers to inspect
@@ -170,10 +172,8 @@ exhaustive search for OGR with 5 marks.
 
 The results are identical with what Wikipedia says for rulers of length 6.
 
-The implementation I found to be about the same as described in
-  William  T.  Rankin,  Optimal  Golomb  Rulers:   An  exhaustive  parallel search implementation, M.S. thesis, Duke University, 1993.
-  (formerly seen at http://people.ee.duke.edu/~wrankin/golomb/golomb_paper.pdf, now as www.mathpuzzle.com/MAA/30-Rulers%20and%20Arrays/Golomb/rankin93optimal.ps)
-as the 2.4 Tree Algorithm with a few of the optimisations also implemented.
+The implementation I found to be about the same as described in the thesis of
+W. Rankin (1993) as the 2.4 Tree Algorithm with a few of the optimisations also implemented.
 
 The invidividual source files offer a description of how they are working:
 
@@ -192,6 +192,7 @@ References
 
  * Euripdes Sotiriades, Apostolos Dollas, Peter Athanas (2000) "Hardware-Software Codesign and Parallel Implementation of a Golomb Ruler Derivation Engine", in Proceedings of the 2000 IEEE Symposium on Field-Programmable Custom Computing Machines. https://www.computer.org/csdl/proceedings/fccm/2000/0871/00/08710227.pdf
  * Kiriakos Simon Mountakis (2000) "Parallel search for optimal Golomb rulers"
+ * William  T.  Rankin,  Optimal  Golomb  Rulers:   An  exhaustive  parallel search implementation, M.S. thesis, Duke University, 1993. (formerly seen at http://people.ee.duke.edu/~wrankin/golomb/golomb_paper.pdf, now as possibly at www.mathpuzzle.com/MAA/30-Rulers%20and%20Arrays/Golomb/rankin93optimal.ps)
 
 -- 
  Steffen Möller, 8/2012 to 7/2016

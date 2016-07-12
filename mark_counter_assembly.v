@@ -75,25 +75,41 @@ wire [8:0] vals [1:NUMPOSITIONS];
 reg[6:0] enabled;
 
 wire [0:MAXVALUE] pairdistsHash[1:(NUMPOSITIONS-1)]; // [0] is always 0, [NUMPOSITIONS] only needed internally to _leaf module, optimised away
-wor [0:MAXVALUE] distances;
 
- // iverilog tolerates the following, generating a working binary
- // ise compilers tolerate it, isim though says "Possible zero delay oscillation detected where simulation can not advance in time because signals can not resolve to a stable value"
+
+/* 
+// compatible with yosym
+wire [0:MAXVALUE] distances;
+assign distances = pairdistsHash[1] | pairdistsHash[2] | pairdistsHash[3] | pairdistsHash[4]; // extend to include pairdistHash[NUMPOSITIONS-1]
+*/
+
+wor [0:MAXVALUE] distances;
 genvar y;
 generate
+ // iverilog tolerates the following, generating a working binary
+ // ise compilers tolerate it, isim though says "Possible zero delay oscillation detected where simulation can not advance in time because signals can not resolve to a stable value"
    for(y=1; y<=NUMPOSITIONS-1; y=y+1) begin: distanceLoop // label due to compiler warning, may be non-intended
       assign distances = pairdistsHash[y];  // distances is wor
    end
 endgenerate
 
-wand ready;
 wire individualReadiness[0:NUMPOSITIONS];
+wire ready;
+assign ready =  individualReadiness[1] & individualReadiness[2] & individualReadiness[3] & individualReadiness[4] & individualReadiness[5]; // extend to include individualReadiness[NUMPOSITIONS]
+
+/*
 genvar x;
 generate
+if (yosys>0) begin
+end
+else begin
+   wand ready;
    for(x=0; x<=NUMPOSITIONS; x=x+1) begin: readyLoop // label due to compiler warning, may be unintended
       assign ready = individualReadiness[x];
    end
+end
 endgenerate
+*/
 
 wire clock;
 assign clock = FXCLK;
@@ -113,8 +129,8 @@ initial begin
             $time, clock, RESET, enabled,
             m[0],m[1],m[2],m[3],m[4],m[5]);
    $monitor("Distances: %b",distances);
-   assign done=0;
-   enabled=firstvariableposition;
+   done    <= 0;
+   enabled <= firstvariableposition;
 end
 
 
@@ -141,7 +157,7 @@ generate
    end // for
 endgenerate
 
-// when extending, do not copy this last one, but the second-but-last one from above
+// The single leaf marker is at the end of the tree
 mark_counter_leaf #(
       NUMPOSITIONS,MAXVALUE,NUMPOSITIONS
    ) mcFinal (
@@ -202,7 +218,7 @@ always @(posedge clock or posedge RESET) begin
         if (enabled<firstvariableposition) begin
            $display("I: assembly: m[0..4]: %0d-%0d-%0d-%0d-%0d",m[0],m[1],m[2],m[3],m[4]);
            $display("I: %d == enabled<firstvariableposition ==%d, completed.",enabled,firstvariableposition);
-           assign done=1;
+           done <= 1;
         end
      end
    end else if (clock && !ready) begin

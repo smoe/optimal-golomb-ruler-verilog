@@ -51,7 +51,7 @@ wire[((NUMPOSITIONS+1)*9):1] firstvalues;
 assign firstvalues={fv[0],fv[1],fv[2],fv[3],fv[4],fv[5]};
 
 
-output wire [((NUMPOSITIONS+1)*9*NUMRESULTS):1] results;
+wire [((NUMPOSITIONS+1)*9*NUMRESULTS):1] results;
 wire [((NUMPOSITIONS+1)*9):1] r[1:20];
 assign {r[1],r[2],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10]}=results;
 reg [8:0] tmpM[0:NUMPOSITIONS];
@@ -71,7 +71,7 @@ initial begin
    reset=1;
    #500 reset<=0;
    $display("I: Reset now set to 0");
-   #10000000 $finish;
+   //#10000000 $finish;
 end
 
 mark_counter_assembly #(MAXVALUE,NUMPOSITIONS,NUMRESULTS)
@@ -87,7 +87,7 @@ always @(posedge done) begin
       $display("I: Found %0d result%s.",numResults,1==numResults?"":"s");
 
       /**/
-      for(i=1; i<=numResults;i=i+1) begin
+      for(i=1; i<=numResults; i=i+1) begin
         {tmpM[0],tmpM[1],tmpM[2],tmpM[3],tmpM[4]}=r[i];
           $display("I: Result %0d:   %0d-%0d-%0d-%0d-%0d",i,tmpM[0],tmpM[1],tmpM[2],tmpM[3],tmpM[4],tmpM[5]);
       end
