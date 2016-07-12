@@ -39,7 +39,7 @@ module mark_counter_leaf #(
    output reg [8:0] val, // position of mark
    output reg [6:0] nextEnabled, // out
                          // no nextStartValue to return
-   input wire [0:MAXVALUE] distances,
+   input wire [1:MAXVALUE] distances,
 
    input wire [((NUMPOSITIONS+1)*9):1] marks_in,
    output reg success // out
@@ -62,10 +62,10 @@ always @(*) begin
    if (reset) begin
 
       $display("I(%0d): Reset of mark counter (leaf), val=%0d, startvalue=%0d",LEVEL,val, startvalue);
-      val=resetvalue;
-      good=0;
-      success=0;
-      nextEnabled=enabled; // calling routine knows what is right
+      val<=resetvalue;
+      good<=0;
+      success<=0;
+      nextEnabled<=enabled; // calling routine knows what is right
       ready <= 1;
 		
    end else if (1==clock) begin

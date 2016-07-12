@@ -35,54 +35,43 @@ module mark_counter #(
    output reg [8:0] val, // current position, fed to m[] of _assembly
    output reg [6:0] nextEnabled, // out
    output reg [8:0] nextStartValue, // out
-   input wire [0:MAXVALUE] distances,
+   input wire [1:MAXVALUE] distances,
    output reg [0:MAXVALUE] pdHash,  // out
    input wire [((NUMPOSITIONS+1)*9):1] marks_in
 );
 
-reg good;
+reg good=0;
 reg [6:0] i;
 reg [8:0] d;
 
 reg [8:0] m[0:NUMPOSITIONS]; // m[0]==0
 
 reg carry;
+reg test;
 
 always @(posedge clock) begin
 
-   if (reset) begin
+   if (reset & ~good) begin
 
       $display("I(%0d): Reset of mark counter, val=%0d, startvalue=%0d",LEVEL,val,startvalue);
       val = resetvalue;
       {nextEnabled} = enabled; // calling routine knows what is right
       {carry,nextStartValue} = startvalue+1'b1;
 
-      ready<=0;
+      pdHash=0;
+      pdHash[val]=1'b1; // omnipresent comparison against mark 0
 
-      if (1'bx !== m[LEVEL]) begin
+      if (val>0) begin
+         {m[0],m[1],m[2],m[3],m[4],m[5]}=marks_in; // extend to include m[NUMPOSITIONS]
+         $display("I(%0d): Initialising distances, m: %0d-%0d-%0d-%0d-%0d-%0d",LEVEL,m[0],m[1],m[2],m[3],m[4],m[5]);
+         for(i=1; i<LEVEL; i=i+1'b1) begin
+            d = val - m[i];
+            pdHash[d] = 1'b1;
+         end // for
+      end // if val
 
-         good=1;
-         pdHash=0; // ISE error: is connected to following multiple drivers
-         if (val>0) begin
-            {m[0],m[1],m[2],m[3],m[4],m[5]}=marks_in; // extend to include m[NUMPOSITIONS]
-            $display("I(%0d): Initialising distances, m: %0d-%0d-%0d-%0d-%0d-%0d",LEVEL,m[0],m[1],m[2],m[3],m[4],m[5]);
-            for(i=0; good && i<LEVEL; i=i+1'b1) begin
-               d = val - m[i];
-               if (0 != distances[d]) begin
-                  $display("I(%0d): distance clash at %0d with earlier distances (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  good=1'b0;
-               end else if (0 != pdHash[d]) begin
-                  $display("W(%0d): distance clash at %0d with current distances - how can this be (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  good=1'b0;
-               end else begin
-                  $display("I(%0d): distance set (d=%0d,i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  pdHash[d] = 1'b1;
-               end // if
-            end // for
-         end // if val
-      end
-
-      ready<=1;
+      good=1;
+      ready=1;
 
    end else begin
 
@@ -91,13 +80,14 @@ always @(posedge clock) begin
       if (enabled==LEVEL) begin	
 
          if (0 == LEVEL) begin
-           $display("I: LEVEL 0 was enabled. This better be the end.");
+           $display("I: LEVEL 0 was enabled. This is the head node and should not happen. This better be the end. Please investigate.");
            $finish();
          end
 
          {m[0],m[1],m[2],m[3],m[4],m[5]}=marks_in; // extend to include m[NUMPOSITIONS]
 
-         //$display("I(%0d): Enabled mark counter, val=%0d, startvalue=%0d",LEVEL,val, startvalue);
+         $display("I(%0d): Enabled mark counter, val=%0d, startvalue=%0d",LEVEL,val, startvalue);
+         $display("I: distances@level%d:  %b",LEVEL,distances);
          // setting value
          if (0==val) begin
             {val} = startvalue;
@@ -105,38 +95,42 @@ always @(posedge clock) begin
             {carry,val} = val+1'b1;
          end
          m[LEVEL]=val;
+         $display("I(%0d): Updated mark counter, val=%0d, startvalue=%0d",LEVEL,val, startvalue);
 		
          // checking if value is within constraint
          if (val <= limit) begin // not <= since not leaf
 			
-            pdHash=0;
+            pdHash<=0;
             good=1;
+	    #1 // critical for the computation of distances if not using wor
             /**/
-            for(i=0; good && i<LEVEL; i=i+1'b1) begin
-               d = val - m[i];
-               if (0 != distances[d]) begin
-                  //$display("I(%0d): distance clash at %0d with earlier distances (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  good=1'b0;
-               end else if (0 != pdHash[d]) begin
-                  //$display("W(%0d): distance clash at %0d with current distances - how can this be (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  good=1'b0;
-	       end else begin
-                  //$display("I(%0d): distance set (d=%0d,i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  pdHash[d] = 1'b1;
-               end
+            for(i=0; i < LEVEL; i=i+1'b1) begin
+               if (good) begin
+                  d = val - m[i];
+                  if (0 != distances[d]) begin
+                     $display("I(%0d): distance clash at %0d with earlier distances (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
+                     good=1'b0;
+                  end else if (0 != pdHash[d]) begin
+                     $display("W(%0d): distance clash at %0d with current distances - how can this be (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
+                     good=1'b0;
+	          end else begin
+                     $display("I(%0d): distance set (d=%0d,i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
+                     pdHash[d] = 1'b1;
+                  end
+               end // if good
             end
             /**/
 
             {carry,nextStartValue} = val + 1'b1; // val was already increased
             if (good) begin
                // we can continue with the level below
-               {carry,nextEnabled}    = LEVEL + 1'b1;
-               //$display("I(%0d): interim, val==%0d, nextEnabled=%0d",LEVEL, val, nextEnabled);
+               {carry,nextEnabled} <= LEVEL + 1'b1;
+               //$display("I(%0d): interim, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
             end else begin
                // we skip this value and try the next because of distance clash
-               {nextEnabled}    = LEVEL;
-               //$display("I(%0d): distance clash, val==%0d, nextEnabled=%0d",LEVEL, val, nextEnabled);
-               pdHash=0; // when trying level again, this needs a new good chance
+               {nextEnabled} <= LEVEL;
+               //$display("I(%0d): distance clash, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
+               pdHash<=0; // when trying level again, this needs a new good chance
             end
 
          end else begin
@@ -146,15 +140,15 @@ always @(posedge clock) begin
               $display("I: LEVEL 0 is next enabled. This better be the end.");
               $finish();
             end
-            {val}=0;
-            {carry,nextEnabled} = enabled-1'b1;
-            pdHash=0; // when trying upper level, this should not be affected by past distances of later marks
+            {val}<=0;
+            {carry,nextEnabled} <= enabled-1'b1;
+            pdHash<=0; // when trying upper level, this should not be affected by past distances of later marks
             //$display(pdHash);
          end
 
          //$display("I(%0d): val=%0d, nextEnabled == %0d",LEVEL,val,nextEnabled);
 
-         m[LEVEL]=val;
+         //m[LEVEL]=val; // not needed
       end else begin
          //$display("I(%0d): clock=%0d, enabled=%0d",LEVEL,clock,enabled);
       end

@@ -77,12 +77,11 @@ reg[6:0] enabled;
 wire [0:MAXVALUE] pairdistsHash[1:(NUMPOSITIONS-1)]; // [0] is always 0, [NUMPOSITIONS] only needed internally to _leaf module, optimised away
 
 
-/* 
 // compatible with yosym
-wire [0:MAXVALUE] distances;
+wire [1:MAXVALUE] distances;
 assign distances = pairdistsHash[1] | pairdistsHash[2] | pairdistsHash[3] | pairdistsHash[4]; // extend to include pairdistHash[NUMPOSITIONS-1]
-*/
 
+/* 
 wor [0:MAXVALUE] distances;
 genvar y;
 generate
@@ -92,22 +91,20 @@ generate
       assign distances = pairdistsHash[y];  // distances is wor
    end
 endgenerate
+*/
 
 wire individualReadiness[0:NUMPOSITIONS];
+
 wire ready;
 assign ready =  individualReadiness[1] & individualReadiness[2] & individualReadiness[3] & individualReadiness[4] & individualReadiness[5]; // extend to include individualReadiness[NUMPOSITIONS]
 
 /*
 genvar x;
 generate
-if (yosys>0) begin
-end
-else begin
    wand ready;
    for(x=0; x<=NUMPOSITIONS; x=x+1) begin: readyLoop // label due to compiler warning, may be unintended
       assign ready = individualReadiness[x];
    end
-end
 endgenerate
 */
 
@@ -194,6 +191,7 @@ always @(posedge RESET) begin
 end
 
 always @(posedge clock or posedge RESET) begin
+   $display("I: distances: distances: %b",distances);
    if (RESET) begin
       enabled=firstvariableposition;
       if (minlength !== MAXVALUE) begin
@@ -204,12 +202,14 @@ always @(posedge clock or posedge RESET) begin
       if (enabled>=firstvariableposition) begin
         $display("I: Moving enabled from %0d to %0d",enabled,next_enabled[enabled]);
         if (good && enabled==NUMPOSITIONS && 0!=m[NUMPOSITIONS]) begin
-           $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d ****************",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
            newminlength=m[NUMPOSITIONS];
+           $display("newminlength=%d, minlength=%d", newminlength, minlength);
            if (newminlength<minlength) begin
+              $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d *** BETTER *****",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
               minlength=newminlength;
               numResults=1;
            end else begin
+              $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d *** AS GOOD ****",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
               {carry,numResults}=numResults+1'b1;
            end
            r[numResults]=marks; // results handling

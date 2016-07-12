@@ -10,7 +10,7 @@ test: mark
 README.html: README.md
 	markdown_py README.md > README.html
 
-mark_yosys blif:  $(SOURCES)
+mark_yosys blif yosys:  $(SOURCES)
 	yosys -q -p "synth_ice40 -blif mark_yosys" $(SOURCES)
 	
 %.blif: %.v
@@ -26,4 +26,4 @@ mark.zip zip: $(SOURCES) MakrXilinx
 clean:
 	rm -f mark
 
-.PHONY: tar zip tgz blif pcf
+.PHONY: tar zip tgz blif pcf yosys
