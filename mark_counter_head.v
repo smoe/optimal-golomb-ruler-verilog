@@ -1,4 +1,5 @@
 `default_nettype none
+`timescale 1ns / 1ps
 
 /**
 
@@ -16,16 +17,16 @@
 
  */
 
+`include "definitions.v"
+
 module mark_counter_head(
    input  wire       clock,
    input  wire       reset,
-   output wire       ready, // always 1
-   output wire [8:0] val, // value currently owned
-   output wire [8:0] nextStartValue // set value for next mark
+   output wire [`PositionValueBitMax:0] val, // value currently owned
+   output wire [`PositionValueBitMax:0] nextStartValue // set value for next mark
 );
 
 assign val = 0;
-assign nextStartValue = 1'b1;
-assign ready=1; // no need to wait for this ruler at all
+assign nextStartValue = 9'b1;
 
 endmodule

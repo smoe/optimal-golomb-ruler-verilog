@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 // ~~~~~~~~ ~~~~~~~~ ~~~~~~~~ ~~~~~~~~ ~~~~~~~~ ~~~~~~~~
 // ~ --
 // ~ Published by:   www.asic-digital-design.com
@@ -34,7 +36,7 @@ module mark_clock_gen (
          //$display("Something noted in the clock, reset still set, clk_i<=0");
          clk_i <= 1'b0;
       end else begin
-        {clk_i} <= 1'b1 + clk_i;
+        {clk_i} <= ~clk_i;
        //$display("Something noted in the clock, clk_i now %0d, clk is %0d",clk_i,clk);
       end
    end
