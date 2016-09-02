@@ -32,8 +32,7 @@ module mark_counter_leaf #(
    input wire       reset,
    output reg       ready,
    input wire       globalready,
-   input wire [`PositionValueBitMax:0] resetvalue,
-
+   //input wire [`PositionValueBitMax:0] resetvalue,
    input wire [`PositionValueBitMax:0] startvalue,
    input wire [`PositionValueBitMax:0] limit, // val needs to stay below this, may shrink over time
    input wire [`PositionNumberBitMax:0] enabled,
@@ -46,11 +45,11 @@ module mark_counter_leaf #(
    output reg success // out
 );
 
-reg good;
+reg good;  // indicator if a Golomb Ruler was found
 reg [`PositionNumberBitMax:0] i; // iterator checking distances
 reg [`PositionValueBitMax:0] d; // temporary variable holding distance
 
-// interim distances in leaf, not sent back as output
+// interim distances in leaf, not sent back as output, only the good flag is required
 reg [1:`MAXVALUE] pdHash=0;
 
 wire [`PositionValueBitMax:0] m[0:`NUMPOSITIONS];
@@ -64,38 +63,42 @@ always @(posedge clock or posedge reset) begin
    if (reset) begin
 
       $display("I(%0d): Reset of mark counter (leaf), val=%0d, resetvalue=%0d, startvalue=%0d",
-		      LEVEL,val,resetvalue,startvalue);
-      val<=resetvalue;
+		      LEVEL,val,`ResetPosition,startvalue);
+      val=`ResetPosition;
       good = 0;
-      success <= 0;
+      success = 0;
       nextEnabled=enabled; // calling routine knows what is right
-      ready <= 1;
-		pdHash <= 0;
+      ready = 1;
+      pdHash = 0;
 		
    end else begin
 
       if (ready && globalready && enabled==LEVEL) begin
 
-         ready <= 0;
-   	   success <= 0; // new value to be assigned to m, yet untested
+         ready = 0;
+   	 success = 0; // new value to be assigned to m, yet untested
 			
          $display("I(%0d): Enabled mark counter (leaf), val=%0d, startvalue=%0d",LEVEL,val,startvalue);
          // setting value
-         if (0==val) begin
-            val <= startvalue;
+         if (`ResetPosition==val) begin
+            val = startvalue;
          end else begin
-            {carry,val} <= val+1'b1;
+            {carry,val} = val+1'b1;
          end
 			
 			
          // checking if value is within constraint
-         if (val<=limit) begin
+         if (val <= limit) begin
 				
-            pdHash <= 0;
+            pdHash = 0;
             good = 1;
 
             for(i=1; good && i<LEVEL; i=i+1'b1) begin
                d = val - m[i];
+               if (0 == d) begin
+                  $display("E: Found distance 0 - cannot happen, but happened, fix this.");
+                  $finish;
+               end
                if (0 != distances[d]) begin
 	          //$display("I(%0d): distance clash with earlier distances at %0d (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
                   good = 1'b0;
@@ -104,36 +107,28 @@ always @(posedge clock or posedge reset) begin
                   good = 1'b0;
                end else begin
                   //$display("I(%0d): distance set (d=%0d,i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  pdHash[d] <= 1'b1; // not required for leaf
+                  pdHash[d] = 1'b1; // not required for leaf
                end
             end
-            /**/
 
-            /*
-	    // Optional display of internal state
-            if (good) begin
-               // we can continue
-               $display("I(%0d): ** action, val==%0d (leaf)",LEVEL, val);
-            end else begin
-               // no action since conflicts with distances
-               $display("I(%0d): NO action, val==%0d (leaf)",LEVEL, val);
-            end
-	    */
-            success <= good; // here see a single change of 'return value'
-				
-            nextEnabled = LEVEL; // we stay at this module if tests fail or not
+            success = good; // here see a single change of 'return value'
+            nextEnabled = LEVEL; // we stay at this module until we hit the limit, in case of success, the limit will be reset externally
 
          end else begin
             // we have reached beyond the limit and thus have to find better
             // values at th earlier marks
             nextEnabled = LEVEL-1'b1;
             //$display("I(%0d): action, val==%0d (leaf), level up to %d",LEVEL, val, nextEnabled);
-            val<=0;
+            val=0;
          end
 
          //$display("I(%0d): val=%0d, nextEnabled == %0d (leaf)",LEVEL,val,nextEnabled);
+
+	 #50; 
 			
-         ready <= 1;
+         ready=1;
+
+	#50;
 
       end
 		

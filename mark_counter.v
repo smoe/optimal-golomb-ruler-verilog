@@ -28,8 +28,8 @@ module mark_counter #(
    input wire       clock,
    input wire       reset,
    output reg       ready,
-	input wire       globalready,
-   input wire [`PositionValueBitMax:0] resetvalue,
+   input wire       globalready,
+//   input wire [`PositionValueBitMax:0] resetvalue,
    input wire [`PositionValueBitMax:0] startvalue,
    input wire [`PositionValueBitMax:0] limit, // in, minlength-optiruler found, val stays below
    input wire [`PositionNumberBitMax:0] enabled,
@@ -52,54 +52,84 @@ reg carry, carry1;
 reg test;
 
 reg resetPerformedInMarkCounter=0;
+reg wasWaitingForGlobalLock=1;
+
+reg [`PositionValueBitMax:0] prevEnabled=-1;
+
+
+always @(posedge clock) begin
+      if (~globalready) begin
+         wasWaitingForGlobalLock=1;
+      end
+end
+
+//assign nextStartValue=val+1;
 
 always @(posedge clock or posedge reset) begin
 
    if (reset) begin
 
       $display("I(%0d): Reset of mark counter from val=%0d to resetvalue=%0d, startvalue would be %0d",
-								LEVEL,val,resetvalue,startvalue);
-      val <= resetvalue;
-      nextStartValue <= resetvalue + 9'd1; 
+								LEVEL,val,`ResetPosition,startvalue);
+      //val = resetvalue;
+      //nextStartValue = resetvalue; 
+      if (LEVEL<`FirstVariablePosition) begin
+         val = startvalue;
+      end else begin
+         val = `ResetPosition;
+      end
+      nextStartValue = val+1; 
       nextEnabled = enabled; // calling routine knows what is right
       
       pdHash=0;
-      pdHash[val]=1'b1; // omnipresent comparison against mark 0
 
       if (val>0) begin
+         pdHash[val]=1'b1; // omnipresent comparison against mark 0
          for(i=1; i<LEVEL; i=i+1'b1) begin
             //d <= val-m[i]; // just to check
-            pdHash[val-m[i]] <= 1'b1;
+            pdHash[val-m[i]] = 1'b1;
          end // for
       end // if val
 
       //distances=MAXVALUE'b0;
-      good <= 1'b1;
-      ready <= 1'b1;
-      pdHash <= 0;
+      good = 1'b1;
+      ready = 1'b1;
       resetPerformedInMarkCounter <= 1; // confirmed, can be removed
 
    end else begin
 
-      if (ready && globalready && enabled==LEVEL) begin	
 
-         ready<=1'b0;
+      if (enabled != LEVEL) begin
+
+         // don't show or do anything, it is apparently not our turn
+
+      end else if (ready && globalready && enabled==LEVEL //&& enabled==prevEnabled
+             && ~wasWaitingForGlobalLock) begin	
+
+         $display("I(%0d): Preventing execution since wasWaitingForGlobalLock was not yet seen",LEVEL);
+
+      end else if (ready && globalready && enabled==LEVEL) begin	
+
+         ready=1'b0;
 
          if (0 == LEVEL) begin
-           $display("I: LEVEL 0 was enabled. This is the head node and should not happen. This better be the end. Please investigate.");
+           $display("I(%0d): LEVEL 0 was enabled. This is the head node and should not happen. This better be the end. Please investigate.");
            $finish();
          end
 
          $display("I(%0d): Enabled mark counter, val=%0d, startvalue=%0d",LEVEL,val,startvalue);
-         $display("I: distances@level%d:  %b",LEVEL,distances);
+         $display("I(%0d): distances:  %b",LEVEL,distances);
          // setting value
-         if (0 == val) begin
-            {val} <= startvalue;
-				nextStartValue <= startvalue + 9'd1;
+         if (`ResetPosition == val) begin
+            val = startvalue;
+            nextStartValue = startvalue + 3'd1;
+           $display("I(%0d): val was at ResetPosition, now occupying startvalue==%0d",LEVEL,startvalue);
          end else begin
-            {carry,val} <= val+9'd1;
-				{carry1,nextStartValue} <= val + 9'd2; 
+            {carry1,nextStartValue} = val + 3'd2; 
+            {carry,val} = val+3'd1;
+           $display("I(%0d): regular interim val, now increased val by one to %0d",LEVEL,val);
          end
+         $display("I(%0d): nextStartValue set to %0d",LEVEL,nextStartValue);
          
          $display("I(%0d): Updated mark counter, val=%0d, startvalue=%0d, nextStartValue=%0d",
                    LEVEL,val,startvalue,nextStartValue);
@@ -107,29 +137,30 @@ always @(posedge clock or posedge reset) begin
          // checking if value is within constraint
          if (val < limit) begin // not <= since not leaf
 			
-            pdHash <= 0;
-            good <= 1;
+            pdHash = 0;
+            good = 1;
 `ifndef avoidWOR
 	   #1 // critical for the computation of distances if not using wor
 `endif
+            #40;
             /* yosys has issue with good && ...*/
             for(i=0; good && i < LEVEL; i=i+1'b1) begin
                //if (good) begin
                   d = val - m[i];
                   if (0 != distances[d]) begin
                      $display("I(%0d): distance clash at %0d with earlier distances (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                     good <= 1'b0;
+                     good = 1'b0;
                   end else if (0 != pdHash[d]) begin
                      $display("W(%0d): distance clash at %0d with current distances - how can this be (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                     good <= 1'b0;
+                     good = 1'b0;
 	          end else begin
                      $display("I(%0d): distance set (d=%0d,i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                     pdHash[d] <= 1'b1;
+                     pdHash[d] = 1'b1;
                   end
                //end // if good
             end
             
-            #1
+            //#1
 	    if (good) begin
                // we can continue with the level below
                {carry,nextEnabled} = LEVEL + 1'b1;
@@ -138,7 +169,7 @@ always @(posedge clock or posedge reset) begin
                // we skip this value and try the next because of distance clash
                {nextEnabled} = LEVEL;
                $display("I(%0d): distance clash, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
-               pdHash <= 0; // when trying level again, this needs a new good chance
+               pdHash = 0; // when trying level again, this needs a new good chance
             end
 
          end else begin
@@ -148,16 +179,21 @@ always @(posedge clock or posedge reset) begin
               $display("I: LEVEL 0 is next enabled. This better be the end.");
               $finish();
             end
-            val <= 1'b0;
-            nextStartValue <= 1'b0;
             {carry,nextEnabled} = enabled-1'b1;
-            pdHash<=0; // when trying upper level, this should not be affected by past distances of later marks
+            val = `ResetPosition;
+            nextStartValue = `ResetPosition;
+            pdHash=0; // when trying upper level, this should not be affected by past distances of later marks
             //$display(pdHash);
          end
 
+         #40;
+
          $display("I(%0d): val=%0d, nextEnabled == %0d",LEVEL,val,nextEnabled);
 
-         ready <= 1;
+         ready = 1;
+         //wasWaitingForGlobalLock=0;
+
+         #10;
 
       end else begin
          $display("I(%0d): clock=%0d, enabled=%0d, ready=%0d, globalready=%0d",LEVEL,clock,enabled,ready,globalready);
