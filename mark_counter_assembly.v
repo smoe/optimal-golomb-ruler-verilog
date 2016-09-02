@@ -232,11 +232,7 @@ always @(posedge clock or posedge RESET) begin
 
    end else if ( ~ iamready ) begin
 
-      $display("I: I am not ready, clients' ready: %b, wasInTheMeantimeWaitingForClientToBeReady: %0",ready, wasInTheMeantimeWaitingForClientToBeReady);
-
-   //end else if ( next_enabled[enabled] == prevEnabled && `NUMPOSITIONS!=enabled) begin
-//
- //     $display("I: clients have not yet come up with another node to enable: prevEnabled==next_enabled[enabled]",prevEnabled);
+      $display("I: I am not ready, clients ready: %0d, wasInTheMeantimeWaitingForClientToBeReady: %0d",ready, wasInTheMeantimeWaitingForClientToBeReady);
 
    end else if ( ready && ~wasInTheMeantimeWaitingForClientToBeReady) begin
 

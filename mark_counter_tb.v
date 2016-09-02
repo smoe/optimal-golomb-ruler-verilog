@@ -81,8 +81,7 @@ initial begin
    #20000000 $finish;
 end
 
-mark_counter_assembly #(
-) ruler(
+mark_counter_assembly ruler(
      .FXCLK(clock),
      .RESET_IN(reset),
      .firstvalues(firstvalues),

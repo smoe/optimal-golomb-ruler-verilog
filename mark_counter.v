@@ -112,11 +112,6 @@ always @(posedge clock or posedge reset) begin
 
          ready=1'b0;
 
-         if (0 == LEVEL) begin
-           $display("I(%0d): LEVEL 0 was enabled. This is the head node and should not happen. This better be the end. Please investigate.");
-           $finish();
-         end
-
          $display("I(%0d): Enabled mark counter, val=%0d, startvalue=%0d",LEVEL,val,startvalue);
          $display("I(%0d): distances:  %b",LEVEL,distances);
          // setting value
