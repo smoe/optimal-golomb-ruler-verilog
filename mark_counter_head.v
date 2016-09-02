@@ -22,11 +22,13 @@
 module mark_counter_head(
    input  wire       clock,
    input  wire       reset,
+   output wire       ready, // computation done when this flag is set
    output wire [`PositionValueBitMax:0] val, // value currently owned
    output wire [`PositionValueBitMax:0] nextStartValue // set value for next mark
 );
 
 assign val = 0;
-assign nextStartValue = 9'b1;
+assign nextStartValue = 1;
+assign ready = 1;
 
 endmodule

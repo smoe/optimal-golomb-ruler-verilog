@@ -1,24 +1,6 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date:    14:06:05 09/22/2012 
-// Design Name: 
-// Module Name:    mark_counter_assembly
-// Project Name: 
-// Target Devices: 
-// Tool versions: 
-// Description: 
-//
-// Dependencies: 	
-//
-// Revision: 
-// Revision 0.01 - File Created
-// Additional Comments: 
-//
 /**
 
  This module constructs the complete ruler from a series of marks, here implemented by the name mark_counter. There is a special mark for the start (mark_counter_head), the middle marks (mark_counter_center) and the tail (mark_counter_leaf). The number of marks on the rules is determined by an externally set parameter NUMPOSITIONS. The maximal length of the rules is constrained by MAXVALUE. The basic idea of the algorithm is that whenever any of the marks attempts to position itself at a position higher than that value, or (and this is already an optimisation), if it is forseeable that the remainig number of positions need more ruler-estate than there is available, then a new position of an earlier marker needs to be found. That "remaining space" information is indicated by the 'optiRuler' array, i.e. the best results yet known.
@@ -43,20 +25,15 @@
 
 `include "definitions.v"
 
-module mark_counter_assembly #(
-   parameter [`PositionNumberBitMax:0] FIRSTVARIABLEPOSITION=2
-`ifdef WithResultsArray
-   , parameter [5:0] NUMRESULTS=10
-`endif
-) (
+module mark_counter_assembly (
    input  wire                          FXCLK, // clock from board
    input  wire                          RESET_IN, // reset from board
-   input  wire [((`NUMPOSITIONS+1)*(`PositionValueBitMax+1)):1] firstvalues,
-   output wire [((`NUMPOSITIONS+1)*(`PositionValueBitMax+1)):1] marks,
-   output reg  [5:0]                    numResults,
+   input  wire [((`NUMPOSITIONS+1)*`PositionValueBitMaxPlus1):1] firstvalues,
+   output wire [((`NUMPOSITIONS+1)*`PositionValueBitMaxPlus1):1] marks,
 `ifdef WithResultsArray
-   output wire [((`NUMPOSITIONS+1)*(`PositionValueBitMax]+1)*NUMRESULTS):1] results,
+   output wire [((`NUMPOSITIONS+1)*`PositionValueBitMaxPlus1*`NumResultsStored):1] results,
 `endif
+   output reg  [5:0]                    numResultsObserved,
    output reg                           done
 );
 
@@ -76,7 +53,7 @@ wire [`PositionValueBitMax:0] m [0:`NUMPOSITIONS];
 assign marks={m[0],m[1],m[2],m[3],m[4],m[5]}; // extend to include m[NUMPOSITIONS]
 wire [`PositionValueBitMax:0] vals [1:`NUMPOSITIONS];
 
-reg[`PositionNumberBitMax:0] enabled = FIRSTVARIABLEPOSITION;
+reg[`PositionNumberBitMax:0] enabled = `FirstVariablePosition;
 
 wire [1:`MAXVALUE] pairdistsHash[1:(`NUMPOSITIONS-1)]; // [0] is always 0, [NUMPOSITIONS] only needed internally to _leaf module, optimised away
 
@@ -119,10 +96,10 @@ assign clock = FXCLK;
 
 /* */
 `ifdef WithResultsArray
-reg [((`NUMPOSITIONS+1)*9):1] r[1:NUMRESULTS];
+reg [((`NUMPOSITIONS+1)*9):1] r[1:`NumResultsStored];
 assign results={r[1],r[2],r[3],r[4],r[5]
 	//,r[6],r[7],r[8],r[9],r[10]
-}; // this should stop at NUMRESULTS
+}; // this should stop at index `NumResultsStored
 `endif
 /* */
 
@@ -133,8 +110,7 @@ reg carry;
 
 initial begin
    $monitor("Zeit:%t Takt:%b reset:%b enabled:%0d m:(%0d,%0d,%0d,%0d,%0d)",
-            $time, clock, RESET, enabled,
-            m[0],m[1],m[2],m[3],m[4],m[5]);
+            $time, clock, RESET, enabled, m[0],m[1],m[2],m[3],m[4],m[5]);
    $monitor("Distances: %b",distances);
 end
 
@@ -145,7 +121,8 @@ end
 
 mark_counter_head mc0 (
    .clock(clock),
-	.reset(RESET),
+   .reset(RESET),
+   .ready(individualReadiness[0]), // node z says if it is ready to compute - node 0 is always ready
    .val(m[0]),            // assignment of 0 to m[0]
    .nextStartValue(next_value[0])
 );
@@ -155,21 +132,21 @@ genvar z;
 generate
    for(z=1; z<`NUMPOSITIONS; z=z+1) begin : mc_loop
 	   mark_counter #(z) mc (
-         .clock(clock),
-			.reset(RESET),
-			.ready(individualReadiness[z]), // node z says if it is ready to compute
+              .clock(clock),
+              .reset(RESET),
+              .ready(individualReadiness[z]), // node z says if it is ready to compute
 	      .globalready(ready&iamready),
-			.resetvalue(z>=FIRSTVARIABLEPOSITION?1'd0:fv[z]),
-			.startvalue(z>=FIRSTVARIABLEPOSITION?next_value[z-1]:fv[z]),   // value that this node should start working on, set by prev node
-			.limit(minlength-optiRuler[`NUMPOSITIONS-z+1]),
-			.enabled(enabled),              // the marker currently enabled
-			.val(m[z]),                     // the position of marker z
-			.nextEnabled(next_enabled[z]),  // the node that a particular node z thinks should be next to perform
-			.nextStartValue(next_value[z]), // the value that this next node z thinks that the downstream node should evaluate first
-			.distances(distances),          // all observed distances between all valid markers combined 
-			.pdHash(pairdistsHash[z]),      // all observed distances between all markers and their respective predecessors
-			.marks_in(marks)                // all marker positions
-		);
+              //.resetvalue(z>=`FirstVariablePosition?1'd0:fv[z]),
+              .startvalue(z>=`FirstVariablePosition?next_value[z-1]:fv[z]),   // value that this node should start working on, which is what the prev node would try next
+              .limit(minlength-optiRuler[`NUMPOSITIONS-z+1]),
+              .enabled(enabled),              // the marker currently enabled
+              .val(m[z]),                     // the position of marker z
+              .nextEnabled(next_enabled[z]),  // the node that a particular node z thinks should be next node that is active - typically the downstream or upstream node
+              .nextStartValue(next_value[z]), // the value that this next node z thinks it should compute on next time it is enabled
+              .distances(distances),          // all observed distances between all valid markers combined 
+              .pdHash(pairdistsHash[z]),      // all observed distances between all markers and their respective predecessors
+              .marks_in(marks)                // all marker positions
+          );
    end // for
 endgenerate
 
@@ -180,8 +157,8 @@ mark_counter_leaf #(
       .clock(clock),
       .reset(RESET),
       .ready(individualReadiness[`NUMPOSITIONS]),
-		.globalready(ready&iamready),
-      .resetvalue(`NUMPOSITIONS>=FIRSTVARIABLEPOSITION?1'd0:fv[`NUMPOSITIONS]),
+      .globalready(ready&iamready),
+      //.resetvalue(`NUMPOSITIONS>=`FirstVariablePosition?1'd0:fv[`NUMPOSITIONS]),
       .startvalue(next_value[`NUMPOSITIONS -1]),
       .limit(minlength-optiRuler[`NUMPOSITIONS-`NUMPOSITIONS+1]),
       .enabled(enabled),
@@ -211,47 +188,103 @@ always @(posedge RESET) begin
 end
 
 reg wasPerformingReset=0;
+reg wasInTheMeantimeWaitingForClientToBeReady=0;
+reg [`PositionNumberBitMax:0] prevEnabled = -1;
+
+always @(posedge clock) begin
+   if ( ~iamready) begin
+      wasInTheMeantimeWaitingForClientToBeReady=0;
+   end else if ( ~ready ) begin
+      wasInTheMeantimeWaitingForClientToBeReady=1;
+   end
+end
+
+reg [`PositionValueBitMax:0] tmpM[0:`NUMPOSITIONS];
+
 always @(posedge clock or posedge RESET) begin
+
    $display("I: distances: %b",distances);
+
    if (RESET) begin
-      enabled <= FIRSTVARIABLEPOSITION;
+
+      enabled = `FirstVariablePosition;
       done = 0;
       if (minlength !== `MAXVALUE) begin
-         minlength <= `MAXVALUE;
-         numResults <= 0;
+         minlength = `MAXVALUE;
       end
+      numResultsObserved = 0;
       wasPerformingReset <= 1;
-      iamready <= 1'b1;
-   end else if (ready & iamready) begin
+      iamready = 1'b1;
+
+   end else if ( done ) begin
+
+      $display("Hey, I know I am done. Kill me.");
+
+   end else if ( ~ready ) begin
+
+      $display("I: one of the counters is not ready, enabled=%0d",enabled);
+
+   end else if ( enabled<`FirstVariablePosition ) begin
+
+      $display("I: %d == enabled<`FirstVariablePosition ==%d, completed.",enabled,`FirstVariablePosition);
+      $display("I: assembly: m[0..4]: %0d-%0d-%0d-%0d-%0d",m[0],m[1],m[2],m[3],m[4]);
+      done = 1;
+
+   end else if ( ~ iamready ) begin
+
+      $display("I: I am not ready, clients ready: %0d, wasInTheMeantimeWaitingForClientToBeReady: %0d",ready, wasInTheMeantimeWaitingForClientToBeReady);
+
+   //end else if ( next_enabled[enabled] == prevEnabled && `NUMPOSITIONS!=enabled) begin
+//
+ //     $display("I: clients have not yet come up with another node to enable: prevEnabled==next_enabled[enabled]",prevEnabled);
+
+   end else if ( ready && ~wasInTheMeantimeWaitingForClientToBeReady) begin
+
+      $display("I: clients should have been waited for, once at least",prevEnabled);
+
+   end else if (ready && iamready) begin
+
       iamready = 1'b0;
-      if (enabled>=FIRSTVARIABLEPOSITION) begin
-        $display("I: checking if good and last enabled was leaf: good=%0d, enabled=%0d",good,enabled);
-        if (good && enabled==`NUMPOSITIONS && 0!=m[`NUMPOSITIONS]) begin
+
+      $display("I: ready && iamready && %0d == prevEnabled != next_enabled[enabled] == %0d - enabled == %0d",prevEnabled, next_enabled[enabled],enabled);
+
+      $display("I: checking if good and last enabled was leaf: good=%0d, enabled=%0d",good,enabled);
+      if (good && enabled==`NUMPOSITIONS && 0!=m[`NUMPOSITIONS]) begin
            newminlength=m[`NUMPOSITIONS];
            $display("newminlength=%d, minlength=%d", newminlength, minlength);
            if (newminlength<minlength) begin
               $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d *** BETTER *****",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
-              minlength  <= newminlength;
-              numResults <= 1;
+              minlength  = newminlength;
+              numResultsObserved = 5'd1;
+//#50;
            end else begin
               $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d *** AS GOOD ****",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
-              {carry,numResults} <= numResults+1'b1;
+              {carry,numResultsObserved} = numResultsObserved+1'b1;
            end
 `ifdef WithResultsArray
-           r[numResults]=marks; // results handling
+           $display("I: Adding result number %0d to results array",numResultsObserved);
+           //r[numResults]=marks; // results handling
+           r[numResultsObserved]={m[0],m[1],m[2],m[3],m[4],m[5]}; // results handling
+           {tmpM[0],tmpM[1],tmpM[2],tmpM[3],tmpM[4],tmpM[5]}=r[numResultsObserved];
+           $display("I: Result %0d: %0d-%0d-%0d-%0d-%0d-%0d",numResultsObserved,tmpM[0],tmpM[1],tmpM[2],tmpM[3],tmpM[4],tmpM[5]);
+           $display("I: Result %0d: %b", numResultsObserved, r[numResultsObserved]);
+           $display("I: Result %0d: 0000000001111111111222222222233333333334444444444", numResultsObserved);
+           $display("I: Result %0d: 1234567890123456789012345678901234567890123456789", numResultsObserved);
+           #50;
 `endif
-        end
-        $display("I: Moving enabled from %0d to %0d",enabled,next_enabled[enabled]);
-        enabled = next_enabled[enabled]; // magic
-        if (enabled<FIRSTVARIABLEPOSITION) begin
-           $display("I: assembly: m[0..4]: %0d-%0d-%0d-%0d-%0d",m[0],m[1],m[2],m[3],m[4]);
-           $display("I: %d == enabled<FIRSTVARIABLEPOSITION ==%d, completed.",enabled,FIRSTVARIABLEPOSITION);
-           done = 1;
-        end
-     end
-     iamready = 1'b1;
-   end else if (!ready) begin
-      //$display("I: not ready");
+      end
+
+      $display("I: Moving enabled from %0d to %0d",enabled,next_enabled[enabled]);
+      prevEnabled = enabled;
+      enabled = next_enabled[enabled]; // magic
+      $display("I: Enabled is now %0d, previously",enabled,prevEnabled);
+      #20;
+      iamready = 1'b1;
+
+      #10;
+
+   end else begin
+      $display("I: This state was not forseen, enabled=",enabled);
    end
 end
 

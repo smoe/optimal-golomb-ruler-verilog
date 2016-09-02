@@ -1,7 +1,7 @@
 TESTBEDS=mark_counter_tb.v 
-SOURCES=mark_clock_gen.v mark_counter_assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v
+SOURCES=mark_clock_gen.v mark_counter_assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v definitions.v
 GENSOURCES=MarkXilinx/ipcore_dir/clk0.v
-mark: $(SOURCES)
+mark: $(SOURCES) $(TESTBEDS)
 	iverilog -Wtimescale -o mark -s mark_counter_tb $(SOURCES) $(TESTBEDS)
 
 test: mark
