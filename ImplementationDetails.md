@@ -1,6 +1,26 @@
 Ideas behind this implementation
 ================================
 
+Algorithm
+---------
+
+A Golomb ruler describes marks on distinct integer values, the positions,
+with the property that the distances between these positions are
+non-redundant.  The art is to find a Golomb ruler that requires only
+minimal space, i.e. a minimal length or the lowest possible value for
+the last position of the ruler. This ruler is then said to be optimal
+for a given number of marks.
+
+For any Golomb ruler, any subset of its marks also have the
+Golomb property.  And this leads directly to the design for this
+implementation. It is a backtracking over incrementally added positions.
+The position at index 0 is always at 0. A long register array collects
+all the distances observed from any position b to all positions a 
+with a smaller than b. If positions for all markers could be found,
+i.e. the distance check for a leaf in the backtracking was successful,
+then a new Golomb ruler was found and the maximal allowed length is
+reduced.
+
 Architecture
 ------------
 
