@@ -19,7 +19,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 //`define WithResultsArray
-//`define YosysCompliance
+`define YosysCompliance
 `ifdef YosysCompliance
 `define AvoidWAND
 `define AvoidWOR

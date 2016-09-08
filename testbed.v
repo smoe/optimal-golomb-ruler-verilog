@@ -6,7 +6,7 @@
 // 
 // Create Date:    14:06:05 09/22/2012 
 // Design Name: 
-// Module Name:    mark_counter_tb 
+// Module Name:    testbed
 // Project Name: 
 // Target Devices: 
 // Tool versions: 
@@ -32,7 +32,7 @@ communication with a host system for a real FPGA.
 
 `include "definitions.v"
 
-module mark_counter_tb;
+module testbed;
 
 // what mark is first to take non-fixed value, 1 means 'unconstrained'
        // but then one also gets symmetric results with a difference of 1 for
@@ -72,8 +72,8 @@ initial begin
    fv[4]=`PositionNumberBitMaxPlus1'd4;
    fv[5]=`PositionNumberBitMaxPlus1'd5;
    
-   $monitor("time:%t clock:%b reset:%b numResultsObserved:%0d m: %0d-%0d-%0d-%0d-%0d-%0d",
-            $time, clock, reset, numResultsObserved,
+   $monitor("time:%t reset:%b numResultsObserved:%0d m: %0d-%0d-%0d-%0d-%0d-%0d",
+            $time, reset, numResultsObserved,
             m[0],m[1],m[2],m[3],m[4],m[5]);
    reset=1;
    #300 reset=0;
@@ -81,7 +81,7 @@ initial begin
    #20000000 $finish;
 end
 
-mark_counter_assembly ruler(
+assembly ruler(
      .FXCLK(clock),
      .RESET_IN(reset),
      .firstvalues(firstvalues),
@@ -93,7 +93,7 @@ mark_counter_assembly ruler(
      .done(done)
   );
 
-mark_clock_gen #(5,2000000) cg (clock,reset);
+clock_gen #(5,2000000) cg (clock,reset);
 
 always @(posedge clock) begin
    if (done) begin

@@ -1,14 +1,19 @@
-TESTBEDS=mark_counter_tb.v 
-SOURCES=mark_clock_gen.v mark_counter_assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v definitions.v
+TESTBEDS=testbed.v 
+SOURCES=clock_gen.v assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v definitions.v
 GENSOURCES=MarkXilinx/ipcore_dir/clk0.v
+
+.SUFFIXES: .v .md .html .blif
+
+.md.html:
+	markdown_py $< > $@
+
 mark: $(SOURCES) $(TESTBEDS)
-	iverilog -Wtimescale -o mark -s mark_counter_tb $(SOURCES) $(TESTBEDS)
+	iverilog -Wtimescale -o mark -s testbed $(SOURCES) $(TESTBEDS)
+
+markdown: README.html ImplementationDetails.html
 
 test: mark
 	time ./mark
-
-README.html: README.md
-	markdown_py README.md > README.html
 
 mark_yosys blif yosys:  $(SOURCES)
 	yosys -q -p "synth_ice40 -blif mark_yosys" $(SOURCES)

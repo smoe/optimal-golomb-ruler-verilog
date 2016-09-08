@@ -9,7 +9,7 @@
 // ~~~~~~~~ ~~~~~~~~ ~~~~~~~~ ~~~~~~~~ ~~~~~~~~ ~~~~~~~~
 // from http://www.asic-digital-design.eu/verilog-examples/testbench-components-models/clock-generator
 
-module mark_clock_gen ( 
+module clock_gen ( 
    output wire clk,
    input  wire reset
 );

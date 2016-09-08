@@ -25,7 +25,7 @@
 
 `include "definitions.v"
 
-module mark_counter_assembly (
+module assembly (
    input  wire                          FXCLK, // clock from board
    input  wire                          RESET_IN, // reset from board
    input  wire [((`NUMPOSITIONS+1)*`PositionValueBitMaxPlus1):1] firstvalues,
@@ -137,7 +137,7 @@ generate
               .ready(individualReadiness[z]), // node z says if it is ready to compute
 	      .globalready(ready&iamready),
               //.resetvalue(z>=`FirstVariablePosition?1'd0:fv[z]),
-              .startvalue(z>=`FirstVariablePosition?next_value[z-1]:fv[z]),   // value that this node should start working on, which is what the prev node would try next
+              .startvalue( (z>=`FirstVariablePosition)? (next_value[z-1]):fv[z]),   // value that this node should start working on, which is what the prev node would try next
               .limit(minlength-optiRuler[`NUMPOSITIONS-z+1]),
               .enabled(enabled),              // the marker currently enabled
               .val(m[z]),                     // the position of marker z
