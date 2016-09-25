@@ -134,10 +134,9 @@ always @(posedge clock or posedge reset) begin
 			
             pdHash = 0;
             good = 1;
-`ifndef avoidWOR
-	   #1 // critical for the computation of distances if not using wor
-`endif
-            #40;
+
+            #1;
+
             /* yosys has issue with good && ...*/
             for(i=0; good && i < LEVEL; i=i+1'b1) begin
                //if (good) begin
@@ -150,21 +149,21 @@ always @(posedge clock or posedge reset) begin
                      good = 1'b0;
 	          end else begin
                      $display("I(%0d): distance set (d=%0d,i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                     pdHash[d] = 1'b1;
+                     pdHash[d] = 1'b1; // needs to be blocked
                   end
                //end // if good
             end
             
-            //#1
+            #1
 	    if (good) begin
                // we can continue with the level below
-               {carry,nextEnabled} = LEVEL + 1'b1;
+               {carry,nextEnabled} <= LEVEL + 1'b1;
                $display("I(%0d): good! interim, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
             end else begin
                // we skip this value and try the next because of distance clash
-               {nextEnabled} = LEVEL;
+               {nextEnabled} <= LEVEL;
                $display("I(%0d): distance clash, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
-               pdHash = 0; // when trying level again, this needs a new good chance
+               pdHash <= 0; // when trying level again, this needs a new good chance
             end
 
          end else begin
@@ -174,21 +173,21 @@ always @(posedge clock or posedge reset) begin
               $display("I: LEVEL 0 is next enabled. This better be the end.");
               $finish();
             end
-            {carry,nextEnabled} = enabled-1'b1;
-            val = `ResetPosition;
-            nextStartValue = `ResetPosition;
-            pdHash=0; // when trying upper level, this should not be affected by past distances of later marks
+            {carry,nextEnabled} <= enabled-1'b1;
+            val <= `ResetPosition;
+            nextStartValue <= `ResetPosition;
+            pdHash = 0; // when trying upper level, this should not be affected by past distances of later marks
             //$display(pdHash);
          end
 
-         #40;
+         #15; // lower fails
 
          $display("I(%0d): val=%0d, nextEnabled == %0d",LEVEL,val,nextEnabled);
 
-         ready = 1;
+         ready = 1; // better remains blocked
          //wasWaitingForGlobalLock=0;
 
-         #10;
+         #5;
 
       end else begin
          $display("I(%0d): clock=%0d, enabled=%0d, ready=%0d, globalready=%0d",LEVEL,clock,enabled,ready,globalready);

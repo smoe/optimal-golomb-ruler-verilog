@@ -105,7 +105,6 @@ assign results={r[1],r[2],r[3],r[4],r[5]
 
 wire good; // indicates success or failure at leaf node
 
-reg [`PositionValueBitMax:0] optiRuler[0:30];
 reg carry;
 
 initial begin
@@ -173,6 +172,8 @@ mark_counter_leaf #(
 /* triggers */
 /*          */
 
+reg [`PositionValueBitMax:0] optiRuler[0:30];
+
 always @(posedge RESET) begin
    optiRuler[ 0]<= 0;
    optiRuler[ 1]<= 0; optiRuler[11]<= 72; optiRuler[21]<=333;
@@ -185,7 +186,20 @@ always @(posedge RESET) begin
    optiRuler[ 8]<=34; optiRuler[18]<=216; optiRuler[28]<=0;
    optiRuler[ 9]<=44; optiRuler[19]<=246; optiRuler[29]<=0;
    optiRuler[10]<=55; optiRuler[20]<=283; optiRuler[30]<=0;
+
+/* 
+   //     0    1    2    3    4    5    6    7    8    9   10      
+	  0,   1,   3,   6,  11,  17,  25,  34,  44,  55,  72,
+   //         11   12   13   14   15   16   17   18   19   20      
+              85, 106, 127, 151, 177, 199, 216, 246, 283, 333,
+   //         21   22   23   24   25   26   27   28   29   30      
+             356, 372, 425, 480, 492,   0,   0,   0,   0
+*/
+
 end
+
+/*
+*/
 
 reg wasPerformingReset=0;
 reg wasInTheMeantimeWaitingForClientToBeReady=0;
@@ -207,14 +221,14 @@ always @(posedge clock or posedge RESET) begin
 
    if (RESET) begin
 
-      enabled = `FirstVariablePosition;
+      enabled <= `FirstVariablePosition;
       done = 0;
       if (minlength !== `MAXVALUE) begin
          minlength = `MAXVALUE;
       end
-      numResultsObserved = 0;
+      numResultsObserved <= 0;
       wasPerformingReset <= 1;
-      iamready = 1'b1;
+      iamready <= 1'b1;
 
    end else if ( done ) begin
 
@@ -240,7 +254,7 @@ always @(posedge clock or posedge RESET) begin
 
    end else if (ready && iamready) begin
 
-      iamready = 1'b0;
+      iamready <= 1'b0;
 
       $display("I: ready && iamready && %0d == prevEnabled != next_enabled[enabled] == %0d - enabled == %0d",prevEnabled, next_enabled[enabled],enabled);
 
@@ -250,7 +264,7 @@ always @(posedge clock or posedge RESET) begin
            $display("newminlength=%d, minlength=%d", newminlength, minlength);
            if (newminlength<minlength) begin
               $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d *** BETTER *****",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
-              minlength  = newminlength;
+              minlength <= newminlength;
               numResultsObserved = 5'd1;
 //#50;
            end else begin
@@ -271,11 +285,11 @@ always @(posedge clock or posedge RESET) begin
       end
 
       $display("I: Moving enabled from %0d to %0d",enabled,next_enabled[enabled]);
-      prevEnabled = enabled;
-      enabled = next_enabled[enabled]; // magic
+      prevEnabled <= enabled;
+      enabled <= next_enabled[enabled]; // magic
       $display("I: Enabled is now %0d, previously",enabled,prevEnabled);
       #20;
-      iamready = 1'b1;
+      iamready <= 1'b1;
 
       #10;
 
