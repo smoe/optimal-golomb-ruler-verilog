@@ -31,7 +31,7 @@ module mark_counter_leaf #(
    input wire       clock,
    input wire       reset,
    output reg       ready,
-   input wire       globalready,
+   input wire       requestForMarkToTakeControl,
    //input wire [`PositionValueBitMax:0] resetvalue,
    input wire [`PositionValueBitMax:0] startvalue,
    input wire [`PositionValueBitMax:0] limit, // val needs to stay below this, may shrink over time
@@ -45,93 +45,138 @@ module mark_counter_leaf #(
    output reg success // out
 );
 
-reg good;  // indicator if a Golomb Ruler was found
+wire good;  // indicator if a Golomb Ruler was found
 reg [`PositionNumberBitMax:0] i; // iterator checking distances
 reg [`PositionValueBitMax:0] d; // temporary variable holding distance
 
 // interim distances in leaf, not sent back as output, only the good flag is required
-reg [1:`MAXVALUE] pdHash=0;
+wire [1:`MAXVALUE] pdHash=0; // not needed
 
-wire [`PositionValueBitMax:0] m[0:`NUMPOSITIONS];
-assign {m[0],m[1],m[2],m[3],m[4],m[5]}=marks_in; // extend to include m[NUMPOSITIONS]
+reg distance_check_start_compute = 0;
+wire distance_check_results_ready;
+
+distance_check #(.LEVEL(LEVEL)) dc (
+	.clock(clock),
+        .reset(reset),
+        .distances(distances),
+        .pdHash(pdHash),
+		  .limit(limit),
+        .marks_in(marks_in),
+        .val(val),
+        .startCompute(distance_check_start_compute),
+        .resultsReady(distance_check_results_ready),
+        .good(good)
+);
+
+
+localparam state_idle = 0;
+localparam state_updatePositions = 1;
+localparam state_earlyValueCheck = 2;
+localparam state_waitForDistanceCheck = 3;
+localparam state_backtrack = 4;
+localparam state_done = 6;
+reg [2:0] state = state_idle;
+
 
 reg carry;
 
 
-always @(posedge clock or posedge reset) begin
+always @(posedge clock) begin
 
    if (reset) begin
 
       $display("I(%0d): Reset of mark counter (leaf), val=%0d, resetvalue=%0d, startvalue=%0d",
 		      LEVEL,val,`ResetPosition,startvalue);
-      val=`ResetPosition;
-      good = 0;
-      success = 0;
-      nextEnabled=enabled; // calling routine knows what is right
-      ready = 1;
-      pdHash = 0;
+      val<=`ResetPosition;
+      success <= 0;
+      nextEnabled <= enabled; // calling routine knows what is right
+      ready <= 1;
+      state <= state_idle;
 		
    end else begin
 
-      if (ready && globalready && enabled==LEVEL) begin
+      case (state)
 
-         ready = 0;
-   	 success = 0; // new value to be assigned to m, yet untested
-			
-         $display("I(%0d): Enabled mark counter (leaf), val=%0d, startvalue=%0d",LEVEL,val,startvalue);
-         // setting value
-         if (`ResetPosition==val) begin
-            val = startvalue;
-         end else begin
-            {carry,val} = val+1'b1;
-         end
-			
-			
-         // checking if value is within constraint
-         if (val <= limit) begin
-				
-            pdHash = 0;
-            good = 1;
+         state_idle: begin
 
-            for(i=1; good && i<LEVEL; i=i+1'b1) begin
-               d = val - m[i];
-               if (0 == d) begin
-                  $display("E: Found distance 0 - cannot happen, but happened, fix this.");
-                  $finish;
-               end
-               if (0 != distances[d]) begin
-	          //$display("I(%0d): distance clash with earlier distances at %0d (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  good = 1'b0;
-               end else	if (0 != pdHash[d]) begin
-                  //$display("W(%0d): distance clash at %0d with current distances - how can this be (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  good = 1'b0;
-               end else begin
-                  //$display("I(%0d): distance set (d=%0d,i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  pdHash[d] = 1'b1; // not required for leaf
-               end
+            if (enabled == LEVEL && requestForMarkToTakeControl) begin
+               $display("I(%0d): Enabled mark counter, val=%0d, startvalue=%0d",LEVEL,val,startvalue);
+               ready <= 1'b0;
+   	       success <= 0; // new value to be assigned to m, yet untested
+               state <= state_updatePositions;
+            end else begin
+               ready <= 1'b1;
             end
-
-            success = good; // here see a single change of 'return value'
-            nextEnabled = LEVEL; // we stay at this module until we hit the limit, in case of success, the limit will be reset externally
-
-         end else begin
-            // we have reached beyond the limit and thus have to find better
-            // values at th earlier marks
-            nextEnabled = LEVEL-1'b1;
-            //$display("I(%0d): action, val==%0d (leaf), level up to %d",LEVEL, val, nextEnabled);
-            val=0;
+         
          end
 
-         //$display("I(%0d): val=%0d, nextEnabled == %0d (leaf)",LEVEL,val,nextEnabled);
+         state_updatePositions: begin
 
-	 #50; 
-			
-         ready=1;
+            $display("I(%0d): distances:  %b",LEVEL,distances);
+            // setting value
+            if (`ResetPosition == val) begin
+               val <= startvalue;
+               $display("I(%0d): val was at ResetPosition, now occupying startvalue==%0d",LEVEL,startvalue);
+            end else begin
+               {carry,val} <= val+3'd1;
+               $display("I(%0d): regular interim val, now increased val by one to %0d",LEVEL,val);
+            end
+         
+            $display("I(%0d): Updated mark counter, val=%0d, startvalue=%0d",
+                   LEVEL,val,startvalue);
 
-	#50;
+            state <= state_earlyValueCheck;
 
-      end
-		
+         end
+
+         state_earlyValueCheck: begin
+            if (val < limit) begin // not <= since not leaf
+               distance_check_start_compute <=  1;
+               if (~distance_check_results_ready) begin
+                  state <= state_waitForDistanceCheck;
+               end
+            end else begin
+               state <= state_backtrack;
+            end
+         end
+
+         state_waitForDistanceCheck: begin
+            distance_check_start_compute <=  0;
+            if (distance_check_results_ready) begin
+               success <= good;
+               nextEnabled <= LEVEL;
+	       if (good) begin
+                  // no need to continue looking for worse solutions
+                  // FIXME: logic flaw
+               end else begin
+                  // we skip this value and try the next because of distance clash
+                  $display("I(%0d): distance clash, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
+                  // FIXME we should check that pdHash is indeed 0
+               end
+               state <= state_done;
+            end  
+         end
+
+         state_backtrack: begin
+            // the module "above" needs to address this
+            $display("I(%0d): level-up, val==%0d -> 0",LEVEL, val);
+            if (0 == nextEnabled) begin
+              $display("I: LEVEL 0 is next enabled. This better be the end.");
+              //$finish();
+            end
+            {carry,nextEnabled} <= enabled-1'b1;
+            val <= `ResetPosition;
+            //$display(pdHash); // FIXME a test that pdHash is 0 here may be good
+            state <= state_done;
+         end
+
+         state_done: begin
+            ready <= 1;
+            state <= state_idle;
+         end
+
+      endcase
+
    end
 	
 end

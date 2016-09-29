@@ -26,7 +26,7 @@
 `include "definitions.v"
 
 module assembly (
-   input  wire                          FXCLK, // clock from board
+   input  wire                          clock,
    input  wire                          RESET_IN, // reset from board
    input  wire [((`NUMPOSITIONS+1)*`PositionValueBitMaxPlus1):1] firstvalues,
    output wire [((`NUMPOSITIONS+1)*`PositionValueBitMaxPlus1):1] marks,
@@ -68,7 +68,7 @@ genvar y;
 generate
  // iverilog tolerates the following, generating a working binary
  // ise compilers tolerate it, isim though says "Possible zero delay oscillation detected where simulation can not advance in time because signals can not resolve to a stable value"
-   for(y=1; y<=`NUMPOSITIONS-1; y=y+1) begin: distanceLoop // label due to compiler warning, may be non-intended
+   for(y=1; y<`NUMPOSITIONS; y=y+1) begin: distanceLoop // label due to compiler warning, may be non-intended
       assign distances = pairdistsHash[y];  // distances is wor
    end
 endgenerate
@@ -91,9 +91,6 @@ generate
 endgenerate
 `endif
 
-wire clock;
-assign clock = FXCLK;
-
 /* */
 `ifdef WithResultsArray
 reg [((`NUMPOSITIONS+1)*9):1] r[1:`NumResultsStored];
@@ -111,6 +108,7 @@ initial begin
    $monitor("Zeit:%t Takt:%b reset:%b enabled:%0d m:(%0d,%0d,%0d,%0d,%0d)",
             $time, clock, RESET, enabled, m[0],m[1],m[2],m[3],m[4],m[5]);
    $monitor("Distances: %b",distances);
+   $monitor("ready: %d",ready);
 end
 
 
@@ -126,6 +124,10 @@ mark_counter_head mc0 (
    .nextStartValue(next_value[0])
 );
 
+// initialised below
+reg [`PositionValueBitMax:0] optiRuler[0:30];
+
+reg requestForMarkToTakeControl=0;
 
 genvar z;
 generate
@@ -134,7 +136,7 @@ generate
               .clock(clock),
               .reset(RESET),
               .ready(individualReadiness[z]), // node z says if it is ready to compute
-	      .globalready(ready&iamready),
+	      .requestForMarkToTakeControl(requestForMarkToTakeControl),
               //.resetvalue(z>=`FirstVariablePosition?1'd0:fv[z]),
               .startvalue( (z>=`FirstVariablePosition)? (next_value[z-1]):fv[z]),   // value that this node should start working on, which is what the prev node would try next
               .limit(minlength-optiRuler[`NUMPOSITIONS-z+1]),
@@ -156,7 +158,7 @@ mark_counter_leaf #(
       .clock(clock),
       .reset(RESET),
       .ready(individualReadiness[`NUMPOSITIONS]),
-      .globalready(ready&iamready),
+      .requestForMarkToTakeControl(requestForMarkToTakeControl),
       //.resetvalue(`NUMPOSITIONS>=`FirstVariablePosition?1'd0:fv[`NUMPOSITIONS]),
       .startvalue(next_value[`NUMPOSITIONS -1]),
       .limit(minlength-optiRuler[`NUMPOSITIONS-`NUMPOSITIONS+1]),
@@ -172,22 +174,8 @@ mark_counter_leaf #(
 /* triggers */
 /*          */
 
-reg [`PositionValueBitMax:0] optiRuler[0:30];
-
-always @(posedge RESET) begin
-   optiRuler[ 0]<= 0;
-   optiRuler[ 1]<= 0; optiRuler[11]<= 72; optiRuler[21]<=333;
-   optiRuler[ 2]<= 1; optiRuler[12]<= 85; optiRuler[22]<=356;
-   optiRuler[ 3]<= 3; optiRuler[13]<=106; optiRuler[23]<=372;
-   optiRuler[ 4]<= 6; optiRuler[14]<=127; optiRuler[24]<=425;
-   optiRuler[ 5]<=11; optiRuler[15]<=151; optiRuler[25]<=480;
-   optiRuler[ 6]<=17; optiRuler[16]<=177; optiRuler[26]<=492;
-   optiRuler[ 7]<=25; optiRuler[17]<=199; optiRuler[27]<=0;
-   optiRuler[ 8]<=34; optiRuler[18]<=216; optiRuler[28]<=0;
-   optiRuler[ 9]<=44; optiRuler[19]<=246; optiRuler[29]<=0;
-   optiRuler[10]<=55; optiRuler[20]<=283; optiRuler[30]<=0;
-
 /* 
+   optiRuler values as an array.
    //     0    1    2    3    4    5    6    7    8    9   10      
 	  0,   1,   3,   6,  11,  17,  25,  34,  44,  55,  72,
    //         11   12   13   14   15   16   17   18   19   20      
@@ -196,106 +184,125 @@ always @(posedge RESET) begin
              356, 372, 425, 480, 492,   0,   0,   0,   0
 */
 
-end
-
 /*
 */
 
-reg wasPerformingReset=0;
-reg wasInTheMeantimeWaitingForClientToBeReady=0;
 reg [`PositionNumberBitMax:0] prevEnabled = -1;
-
-always @(posedge clock) begin
-   if ( ~iamready) begin
-      wasInTheMeantimeWaitingForClientToBeReady=0;
-   end else if ( ~ready ) begin
-      wasInTheMeantimeWaitingForClientToBeReady=1;
-   end
-end
 
 reg [`PositionValueBitMax:0] tmpM[0:`NUMPOSITIONS];
 
-always @(posedge clock or posedge RESET) begin
+localparam state_init = 0;
+localparam state_waitForMarksToBeAllReady = 1;
+localparam state_passControlToActiveMark = 2;
+localparam state_waitForMarksToPassControlBack = 3;
+localparam state_waitingForMarksToBeBusy = 5;
+localparam state_done = 5;
+
+reg [2:0] state=state_init;
+
+always @(posedge clock) begin
 
    $display("I: distances: %b",distances);
 
    if (RESET) begin
 
+      optiRuler[ 0]<= 0;
+      optiRuler[ 1]<= 0; optiRuler[11]<= 72; optiRuler[21]<=333;
+      optiRuler[ 2]<= 1; optiRuler[12]<= 85; optiRuler[22]<=356;
+      optiRuler[ 3]<= 3; optiRuler[13]<=106; optiRuler[23]<=372;
+      optiRuler[ 4]<= 6; optiRuler[14]<=127; optiRuler[24]<=425;
+      optiRuler[ 5]<=11; optiRuler[15]<=151; optiRuler[25]<=480;
+      optiRuler[ 6]<=17; optiRuler[16]<=177; optiRuler[26]<=492;
+      optiRuler[ 7]<=25; optiRuler[17]<=199; optiRuler[27]<=0;
+      optiRuler[ 8]<=34; optiRuler[18]<=216; optiRuler[28]<=0;
+      optiRuler[ 9]<=44; optiRuler[19]<=246; optiRuler[29]<=0;
+      optiRuler[10]<=55; optiRuler[20]<=283; optiRuler[30]<=0;
+
       enabled <= `FirstVariablePosition;
-      done = 0;
-      if (minlength !== `MAXVALUE) begin
-         minlength = `MAXVALUE;
-      end
+      done <= 0;
+      minlength <= `MAXVALUE;
+
       numResultsObserved <= 0;
-      wasPerformingReset <= 1;
-      iamready <= 1'b1;
+      requestForMarkToTakeControl <= 0;
 
-   end else if ( done ) begin
-
-      $display("Hey, I know I am done. Kill me.");
-
-   end else if ( ~ready ) begin
-
-      $display("I: one of the counters is not ready, enabled=%0d",enabled);
-
-   end else if ( enabled<`FirstVariablePosition ) begin
-
-      $display("I: %d == enabled<`FirstVariablePosition ==%d, completed.",enabled,`FirstVariablePosition);
-      $display("I: assembly: m[0..4]: %0d-%0d-%0d-%0d-%0d",m[0],m[1],m[2],m[3],m[4]);
-      done = 1;
-
-   end else if ( ~ iamready ) begin
-
-      $display("I: I am not ready, clients ready: %0d, wasInTheMeantimeWaitingForClientToBeReady: %0d",ready, wasInTheMeantimeWaitingForClientToBeReady);
-
-   end else if ( ready && ~wasInTheMeantimeWaitingForClientToBeReady) begin
-
-      $display("I: clients should have been waited for, once at least",prevEnabled);
-
-   end else if (ready && iamready) begin
-
-      iamready <= 1'b0;
-
-      $display("I: ready && iamready && %0d == prevEnabled != next_enabled[enabled] == %0d - enabled == %0d",prevEnabled, next_enabled[enabled],enabled);
-
-      $display("I: checking if good and last enabled was leaf: good=%0d, enabled=%0d",good,enabled);
-      if (good && enabled==`NUMPOSITIONS && 0!=m[`NUMPOSITIONS]) begin
-           newminlength=m[`NUMPOSITIONS];
-           $display("newminlength=%d, minlength=%d", newminlength, minlength);
-           if (newminlength<minlength) begin
-              $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d *** BETTER *****",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
-              minlength <= newminlength;
-              numResultsObserved = 5'd1;
-//#50;
-           end else begin
-              $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d *** AS GOOD ****",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
-              {carry,numResultsObserved} = numResultsObserved+1'b1;
-           end
-`ifdef WithResultsArray
-           $display("I: Adding result number %0d to results array",numResultsObserved);
-           //r[numResults]=marks; // results handling
-           r[numResultsObserved]={m[0],m[1],m[2],m[3],m[4],m[5]}; // results handling
-           {tmpM[0],tmpM[1],tmpM[2],tmpM[3],tmpM[4],tmpM[5]}=r[numResultsObserved];
-           $display("I: Result %0d: %0d-%0d-%0d-%0d-%0d-%0d",numResultsObserved,tmpM[0],tmpM[1],tmpM[2],tmpM[3],tmpM[4],tmpM[5]);
-           $display("I: Result %0d: %b", numResultsObserved, r[numResultsObserved]);
-           $display("I: Result %0d: 0000000001111111111222222222233333333334444444444", numResultsObserved);
-           $display("I: Result %0d: 1234567890123456789012345678901234567890123456789", numResultsObserved);
-           #50;
-`endif
-      end
-
-      $display("I: Moving enabled from %0d to %0d",enabled,next_enabled[enabled]);
-      prevEnabled <= enabled;
-      enabled <= next_enabled[enabled]; // magic
-      $display("I: Enabled is now %0d, previously",enabled,prevEnabled);
-      #20;
-      iamready <= 1'b1;
-
-      #10;
+      state <= state_init;
 
    end else begin
-      $display("I: This state was not forseen, enabled=",enabled);
+
+      $display("I: assembly: state %d", state);
+      $display("I: assembly: m[0..4]: %0d-%0d-%0d-%0d-%0d",m[0],m[1],m[2],m[3],m[4]);
+
+      case (state)
+
+      state_init: begin
+         state <= state_waitForMarksToBeAllReady;
+      end
+
+      state_waitForMarksToBeAllReady: begin
+         if (ready) begin
+            state <= state_passControlToActiveMark;
+         end else begin
+            $display("I: assembly: still waiting for marks to become ready");
+         end
+      end
+
+      state_passControlToActiveMark: begin
+         $display("I: assembly:  %0d == prevEnabled != next_enabled[enabled] == %0d - enabled == %0d",prevEnabled, next_enabled[enabled],enabled);
+
+         if ( enabled<`FirstVariablePosition ) begin
+            $display("I: %d == enabled<`FirstVariablePosition ==%d, completed.",enabled,`FirstVariablePosition);
+            state <= state_done;
+         end else begin
+            $display("I: checking if good and last enabled was leaf: good=%0d, enabled=%0d",good,enabled);
+
+            if (good && enabled==`NUMPOSITIONS && 0!=m[`NUMPOSITIONS]) begin
+               newminlength=m[`NUMPOSITIONS];
+               $display("newminlength=%d, minlength=%d", newminlength, minlength);
+               if (newminlength<minlength) begin
+                  $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d *** BETTER *****",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
+                  minlength <= newminlength;
+                  numResultsObserved <= 5'd1;
+//#50;
+               end else begin
+                  $display("************ GOOD FOR %0d-%0d-%0d-%0d-%0d-%0d *** AS GOOD ****",m[0],m[1],m[2],m[3],m[4],m[5]); // extend to include m[NUMPOSITIONS]
+                  {carry,numResultsObserved} <= numResultsObserved+1'b1;
+               end
+`ifdef WithResultsArray
+               $display("I: Adding result number %0d to results array",numResultsObserved);
+               //r[numResults]=marks; // results handling
+               r[numResultsObserved]={m[0],m[1],m[2],m[3],m[4],m[5]}; // results handling
+               {tmpM[0],tmpM[1],tmpM[2],tmpM[3],tmpM[4],tmpM[5]}=r[numResultsObserved];
+               $display("I: Result %0d: %0d-%0d-%0d-%0d-%0d-%0d",numResultsObserved,tmpM[0],tmpM[1],tmpM[2],tmpM[3],tmpM[4],tmpM[5]);
+               $display("I: Result %0d: %b", numResultsObserved, r[numResultsObserved]);
+               $display("I: Result %0d: 0000000001111111111222222222233333333334444444444", numResultsObserved);
+               $display("I: Result %0d: 1234567890123456789012345678901234567890123456789", numResultsObserved);
+`endif
+            end
+            $display("I: Moving enabled from %0d to %0d",enabled,next_enabled[enabled]);
+            prevEnabled <= enabled;
+            enabled <= next_enabled[enabled]; // magic
+            $display("I: Enabled is now %0d, previously",enabled,prevEnabled);
+            state <= state_waitingForMarksToBeBusy;
+            requestForMarkToTakeControl <= 1;
+         end
+      end
+
+      state_waitingForMarksToBeBusy: begin
+         if (~ready) begin
+            state <= state_waitForMarksToBeAllReady;
+            requestForMarkToTakeControl <= 0;
+         end
+      end
+
+      state_done: begin
+         $display("I: assembly: done");
+         done <= 1;
+      end
+
+      endcase
+
    end
+
 end
 
 endmodule

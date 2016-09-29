@@ -1,5 +1,5 @@
-TESTBEDS=testbed.v 
-SOURCES=clock_gen.v assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v definitions.v
+TESTBEDS=clock_gen.v testbed.v 
+SOURCES=assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v definitions.v distance_check.v
 GENSOURCES=MarkXilinx/ipcore_dir/clk0.v
 
 .SUFFIXES: .v .md .html .blif

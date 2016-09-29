@@ -27,8 +27,8 @@ module mark_counter_head(
    output wire [`PositionValueBitMax:0] nextStartValue // set value for next mark
 );
 
-assign val = 0;
-assign nextStartValue = 1;
-assign ready = 1;
+assign val = `PositionValueBitMaxPlus1'd0;
+assign nextStartValue = `PositionValueBitMaxPlus1'd1;
+assign ready = 1'b1;
 
 endmodule

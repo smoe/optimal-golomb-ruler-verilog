@@ -64,6 +64,7 @@ reg [5:0] i; // for result presentation
 `endif
 
 initial begin
+   reset=0;
    //m[0]<=9'd0; m[1]<=9'd1; m[2]<=9'd2; m[3]<=9'd3; m[4]<=9'd4;
    fv[0]=`PositionNumberBitMaxPlus1'd0;
    fv[1]=`PositionNumberBitMaxPlus1'd1;
@@ -71,18 +72,20 @@ initial begin
    fv[3]=`PositionNumberBitMaxPlus1'd3;
    fv[4]=`PositionNumberBitMaxPlus1'd4;
    fv[5]=`PositionNumberBitMaxPlus1'd5;
+
+   #10
    
    $monitor("time:%t reset:%b numResultsObserved:%0d m: %0d-%0d-%0d-%0d-%0d-%0d",
             $time, reset, numResultsObserved,
             m[0],m[1],m[2],m[3],m[4],m[5]);
    reset=1;
-   #300 reset=0;
+   #3000 reset=0;
    $display("I: Reset now set to 0");
    #20000000 $finish;
 end
 
 assembly ruler(
-     .FXCLK(clock),
+     .clock(clock),
      .RESET_IN(reset),
      .firstvalues(firstvalues),
      .marks(marks),
