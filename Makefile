@@ -1,11 +1,51 @@
+DEVICE = 1k
+PCF = icestick_$(DEVICE).pcf
+PATHTODEVICE = /dev/ttyUSB1
+
+YOSYS=/home/moeller/git/yosys/yosys
 TESTBEDS=clock_gen.v testbed.v 
 SOURCES=assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v definitions.v distance_check.v
 GENSOURCES=MarkXilinx/ipcore_dir/clk0.v
+
+TOP=ogr.v
+BITSTREAM = $(patsubst %.v,%.bin,$(TOP))
+HOST      = $(patsubst %.v,%_host,$(TOP))
+
+SOURCES2=ogr.v
 
 .SUFFIXES: .v .md .html .blif
 
 .md.html:
 	markdown_py $< > $@
+
+%.blif: %.v
+	iverilog $<
+	valgrind --leak-check=full $(YOSYS) -q -p "synth_ice40 -blif $@" $<
+
+%.tiles: %.blif
+	arachne-pnr -d $(DEVICE) -p $(PCF) -o $@ $<
+
+%.bin: %.tiles
+	icepack $< $@
+
+flash: $(BITSTREAM)
+	iceprog $<
+
+run:	$(HOST)
+	sudo ./ogr_host $(PATHTODEVICE) 26 1 2 3
+
+
+ifeq (uart_adder.v,$(TOP))
+all: $(BITSTREAM) $(HOST)
+else
+all: $(BITSTREAM)
+endif
+
+
+
+testbed: mark ogr_host
+
+ogr:	ogr.blif ogr_host
 
 mark: $(SOURCES) $(TESTBEDS)
 	iverilog -Wtimescale -o mark -s testbed $(SOURCES) $(TESTBEDS)
@@ -18,8 +58,6 @@ test: mark
 mark_yosys blif yosys:  $(SOURCES)
 	yosys -q -p "synth_ice40 -blif mark_yosys" $(SOURCES)
 	
-%.blif: %.v
-	yosys -q -p "synth_ice40 -blif $@" $<
 
 mark.tgz tar tgz: $(SOURCES) MarkXilinx
 	tar czf mark.tgz Makefile $(SOURCES) $(TESTBEDS) MarkXilinx
