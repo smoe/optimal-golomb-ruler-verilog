@@ -1,0 +1,20 @@
+# Red LEDs
+set_io LED0 99
+set_io LED1 98
+set_io LED2 97
+set_io LED3 96
+
+# Green LED
+set_io LED4 95
+
+# FTDI Port B UART
+#set_io DCDn 1
+#set_io DSRn 2
+#set_io DTRn 3
+#set_io CTSn 4
+#set_io RTSn 7
+set_io RS232_Tx_TTL 8
+set_io RS232_Rx_TTL 9
+
+# 12 MHz clock
+set_io iCE_CLK 21

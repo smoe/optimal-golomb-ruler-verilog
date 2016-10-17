@@ -25,9 +25,7 @@ to follow.
 This project is the author's first hardware description language
 (HDL) project. And the code likely looks a bit more like how artificial
 agents would address the problem. I have now seen other, completely
-array-based implementations. But, for now, it synthesises. And it already
-works for the LX9, leaving ample of space for an array of this (or a 
-better such) implementation.
+array-based implementations.
 
 The implementation I found to be about the same as described in the thesis of
 W. Rankin (1993) as the 2.4 Tree Algorithm with a few of the optimisations also implemented.
@@ -35,15 +33,20 @@ W. Rankin (1993) as the 2.4 Tree Algorithm with a few of the optimisations also 
 The invidividual source files offer a description of how they are working:
 
 <table>
-<tr><th>File</th>                   <th>Description</th></tr>
-<tr><td>mark_counter_tb.v</td>      <td>Testbed</td></tr>
-<tr><td>mark_clock_gen.v</td>       <td>Module providing a clock</td></tr>
-<tr><td>mark_counter_assembly.v</td><td>Module forming the ruler, i.e. a collection of individual marks</td></tr>
-<tr><td>mark_counter.v</td>         <td>Module representing a regular mark on the ruler</td></tr>
-<tr><td>mark_counter_leaf.v</td>    <td>Module representing the final mark on the ruler</td></tr>
-<tr><td>mark_counter_head.v</td>    <td>Module representing the very first mark on the ruler, i.e. position 0</td></tr>
-<tr><td>definitions.v</td>          <td>Series of invariant global parameters</td></tr>
+<tr><th>File</th>                <th>Description</th></tr>
+<tr><td>testbed.v</td>           <td>Testbed for the OGR implementation</td></tr>
+<tr><td>clock_gen.v</td>         <td>Module providing a clock</td></tr>
+<tr><td>assembly.v</td>          <td>Module forming the ruler, i.e. a collection of individual marks</td></tr>
+<tr><td>mark_counter.v</td>      <td>Module representing a regular mark on the ruler</td></tr>
+<tr><td>mark_counter_leaf.v</td> <td>Module representing the final mark on the ruler</td></tr>
+<tr><td>mark_counter_head.v</td> <td>Module representing the very first mark on the ruler, i.e. position 0</td></tr>
+<tr><td>distance_check</td>      <td>Module to check distances between marks</td></tr>
+<tr><td>definitions.v</td>       <td>Series of invariant global parameters</td></tr>
+<tr><td>ogr.v</td>               <td>FPGA-side of UART communication with host</td></tr>
+<tr><td>ogr_host.C</td>          <td>Linux command line to control the FPGA</td></tr>
 </table>
+
+The command line interface hass yet to be connected with the assembly.v module.
 
 
 The Makefile runs iverilog by default and "make test" also executes.
@@ -74,6 +77,6 @@ References
  * William  T.  Rankin,  Optimal  Golomb  Rulers:   An  exhaustive  parallel search implementation, M.S. thesis, Duke University, 1993. (formerly seen at http://people.ee.duke.edu/~wrankin/golomb/golomb_paper.pdf, now as possibly at www.mathpuzzle.com/MAA/30-Rulers%20and%20Arrays/Golomb/rankin93optimal.ps)
 
 -- 
- Steffen Möller, 8/2012 to 7/2016
+ Steffen Möller, 8/2012 to 10/2016
  
  Niendorf/Ostsee, Germany

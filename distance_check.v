@@ -28,6 +28,7 @@ module distance_check #(
 )(
     input clock,
     input reset,
+    input cleanup,
     input wire [1:`MAXVALUE] distances,
     input wire [`PositionValueBitMax:0] limit, // in, minlength-optiruler found, val stays below
     input wire [((`NUMPOSITIONS+1)*(`PositionValueBitMax+1)):1] marks_in,
@@ -54,11 +55,12 @@ reg carry;
 
 always @(posedge clock) begin
 
-   if (reset) begin
+   if (reset || cleanup) begin
 
       pdHash <= 0;
       resultsReady <= 1;
       good <= 1;
+      state <= state_idle;
 
    end else begin
 
@@ -70,6 +72,7 @@ always @(posedge clock) begin
                  if (startCompute) begin
                     i<=0;
                     state<=state_startCompute;
+                    pdHash <= 0; // needs to be blocked
                     resultsReady<=0;
                  end else begin
                     resultsReady<=1;

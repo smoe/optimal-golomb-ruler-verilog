@@ -52,14 +52,16 @@ reg [`PositionValueBitMax:0] prevEnabled=-1;
 
 reg distance_check_start_compute = 0;
 wire distance_check_results_ready;
+reg distance_check_cleanup = 0;
 
 distance_check #(.LEVEL(LEVEL)) dc (
 	.clock(clock),
         .reset(reset),
+        .cleanup(distance_check_cleanup),
         .distances(distances),
         .pdHash(pdHash),
         .marks_in(marks_in),
-		  .limit(limit),
+        .limit(limit),
         .val(val),
         .startCompute(distance_check_start_compute),
         .resultsReady(distance_check_results_ready),
@@ -90,23 +92,30 @@ always @(posedge clock) begin
       if (LEVEL<`FirstVariablePosition) begin
          val <= startvalue;
          {carry,nextStartValue} <= startvalue+1;
-		end else begin
+         distance_check_start_compute <= 1;
+      end else begin
          val <= `ResetPosition;
          {carry,nextStartValue} <= `ResetPosition+1;
+         distance_check_start_compute <= 0;
       end
       nextEnabled <= enabled; // calling routine knows what is right
       
       //distances=MAXVALUE'b0;
       ready <= 1;
       resetPerformedInMarkCounter <= 1; // confirmed, can be removed
-      distance_check_start_compute <= 0;
 
       state <= state_idle;
 
    end else if (LEVEL != enabled) begin
       if (state_idle != state) begin
          $display("I(%0d): was caught to be deactivated while not in idle: state=%0d",LEVEL,state);
-         state <= state_idle;
+      end
+      distance_check_start_compute <= 0;
+      state <= state_idle;
+      ready <= 1;
+      if (LEVEL<enabled) begin
+          nextEnabled <= LEVEL + 1'b1; // FIXME: should not be required
+          nextStartValue <= val + 1'b1; // FIXME: should not be required
       end
    end else if (LEVEL == enabled) begin
 
@@ -119,6 +128,7 @@ always @(posedge clock) begin
                ready <= 1'b0;
                state <= state_updatePositions;
             end else begin
+               $display("I(%0d): Enabled mark counter, nothing do, waiting for control, val=%0d, startvalue=%0d",LEVEL,val,startvalue);
                ready <= 1'b1;
             end
          
@@ -163,11 +173,13 @@ always @(posedge clock) begin
 	       if (good) begin
                   // we can continue with the level below
                   {carry,nextEnabled} <= LEVEL + 1'b1;
+                  distance_check_cleanup <= 0; // not required, just for clarity, we still need this pdHash value
                   $display("I(%0d): good! interim, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
                end else begin
                   // we skip this value and try the next because of distance clash
                   {nextEnabled} <= LEVEL;
                   $display("I(%0d): distance clash, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
+                  distance_check_cleanup <= 1;
                   // FIXME we should check that pdHash is indeed 0
                end
                state <= state_done;
@@ -184,15 +196,23 @@ always @(posedge clock) begin
             {carry,nextEnabled} <= enabled-1'b1;
             val <= `ResetPosition;
             nextStartValue <= `ResetPosition;
+            distance_check_cleanup <= 1;
+            distance_check_start_compute <= 1;
             //$display(pdHash); // FIXME a test that pdHash is 0 here may be good
             state <= state_done;
          end
 
          state_done: begin
             ready <= 1;
-            state <= state_idle;
+            distance_check_cleanup <= 0;
+            distance_check_start_compute <= 0;
+            if (distance_check_results_ready) begin
+                state <= state_idle;
+            end else begin
+                $display("I(%0d): waiting for distance check to be completed in state_done");
+            end
          end
-
+			
       endcase
 
    end

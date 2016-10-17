@@ -85,7 +85,7 @@ always @(posedge clock) begin
 
    if (reset) begin
 
-      $display("I(%0d): Reset of mark counter (leaf), val=%0d, resetvalue=%0d, startvalue=%0d",
+      $display("I(%0d == LEAF): Reset of mark counter (leaf), val=%0d, resetvalue=%0d, startvalue=%0d",
 		      LEVEL,val,`ResetPosition,startvalue);
       val<=`ResetPosition;
       success <= 0;
@@ -100,7 +100,7 @@ always @(posedge clock) begin
          state_idle: begin
 
             if (enabled == LEVEL && requestForMarkToTakeControl) begin
-               $display("I(%0d): Enabled mark counter, val=%0d, startvalue=%0d",LEVEL,val,startvalue);
+               $display("I(%0d == LEAF): Enabled mark counter, val=%0d, startvalue=%0d",LEVEL,val,startvalue);
                ready <= 1'b0;
    	       success <= 0; // new value to be assigned to m, yet untested
                state <= state_updatePositions;
@@ -112,17 +112,17 @@ always @(posedge clock) begin
 
          state_updatePositions: begin
 
-            $display("I(%0d): distances:  %b",LEVEL,distances);
+            $display("I(%0d == LEAF): distances:  %b",LEVEL,distances);
             // setting value
             if (`ResetPosition == val) begin
                val <= startvalue;
-               $display("I(%0d): val was at ResetPosition, now occupying startvalue==%0d",LEVEL,startvalue);
+               $display("I(%0d == LEAF): val was at ResetPosition, now occupying startvalue==%0d",LEVEL,startvalue);
             end else begin
                {carry,val} <= val+3'd1;
-               $display("I(%0d): regular interim val, now increased val by one to %0d",LEVEL,val);
+               $display("I(%0d == LEAF): regular interim val, now increased val by one to %0d",LEVEL,val);
             end
          
-            $display("I(%0d): Updated mark counter, val=%0d, startvalue=%0d",
+            $display("I(%0d == LEAF): Updated mark counter, val=%0d, startvalue=%0d",
                    LEVEL,val,startvalue);
 
             state <= state_earlyValueCheck;
@@ -130,7 +130,7 @@ always @(posedge clock) begin
          end
 
          state_earlyValueCheck: begin
-            if (val < limit) begin // not <= since not leaf
+            if (val <= limit) begin // <= since leaf
                distance_check_start_compute <=  1;
                if (~distance_check_results_ready) begin
                   state <= state_waitForDistanceCheck;
@@ -144,16 +144,16 @@ always @(posedge clock) begin
             distance_check_start_compute <=  0;
             if (distance_check_results_ready) begin
                success <= good;
-               nextEnabled <= LEVEL;
 	       if (good) begin
-                  // no need to continue looking for worse solutions
-                  // FIXME: logic flaw
+                  state <= state_done;
+                  //state <= state_backtrack;
                end else begin
                   // we skip this value and try the next because of distance clash
                   $display("I(%0d): distance clash, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
                   // FIXME we should check that pdHash is indeed 0
+                  nextEnabled <= LEVEL;
+                  state <= state_done;
                end
-               state <= state_done;
             end  
          end
 

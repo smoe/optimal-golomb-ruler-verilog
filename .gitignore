@@ -2,3 +2,6 @@ mark
 OptimalGolombRuler
 *.html
 *.blif
+ogr_host
+ogr.bin
+a.out

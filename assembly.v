@@ -27,7 +27,7 @@
 
 module assembly (
    input  wire                          clock,
-   input  wire                          RESET_IN, // reset from board
+   input  wire                          reset, // reset from board
    input  wire [((`NUMPOSITIONS+1)*`PositionValueBitMaxPlus1):1] firstvalues,
    output wire [((`NUMPOSITIONS+1)*`PositionValueBitMaxPlus1):1] marks,
 `ifdef WithResultsArray
@@ -37,8 +37,6 @@ module assembly (
    output reg                           done
 );
 
-wire RESET;
-assign RESET = RESET_IN;
 
 reg [`PositionValueBitMax:0] minlength;
 reg [`PositionValueBitMax:0] newminlength;
@@ -106,7 +104,7 @@ reg carry;
 
 initial begin
    $monitor("Zeit:%t Takt:%b reset:%b enabled:%0d m:(%0d,%0d,%0d,%0d,%0d)",
-            $time, clock, RESET, enabled, m[0],m[1],m[2],m[3],m[4],m[5]);
+   $time, clock, reset, enabled, m[0],m[1],m[2],m[3],m[4],m[5]);
    $monitor("Distances: %b",distances);
    $monitor("ready: %d",ready);
 end
@@ -118,7 +116,7 @@ end
 
 mark_counter_head mc0 (
    .clock(clock),
-   .reset(RESET),
+   .reset(reset),
    .ready(individualReadiness[0]), // node z says if it is ready to compute - node 0 is always ready
    .val(m[0]),            // assignment of 0 to m[0]
    .nextStartValue(next_value[0])
@@ -129,23 +127,24 @@ reg [`PositionValueBitMax:0] optiRuler[0:30];
 
 reg requestForMarkToTakeControl=0;
 
-genvar z;
+genvar i;
 generate
-   for(z=1; z<`NUMPOSITIONS; z=z+1) begin : mc_loop
-	   mark_counter #(z) mc (
+   for(i=1; i<`NUMPOSITIONS; i=i+1) begin : mc_loop
+	   mark_counter #(i) mc (
               .clock(clock),
-              .reset(RESET),
-              .ready(individualReadiness[z]), // node z says if it is ready to compute
+              .reset(reset),
+              .ready(individualReadiness[i]), // node z says if it is ready to compute
 	      .requestForMarkToTakeControl(requestForMarkToTakeControl),
               //.resetvalue(z>=`FirstVariablePosition?1'd0:fv[z]),
-              .startvalue( (z>=`FirstVariablePosition)? (next_value[z-1]):fv[z]),   // value that this node should start working on, which is what the prev node would try next
-              .limit(minlength-optiRuler[`NUMPOSITIONS-z+1]),
+              .startvalue( (i>=`FirstVariablePosition)? (next_value[i-1]):fv[i]),   // value that this node should start working on, which is what the prev node would try next
+              //.startvalue(i),   // debugging
+              .limit(minlength-optiRuler[`NUMPOSITIONS-i+1]),
               .enabled(enabled),              // the marker currently enabled
-              .val(m[z]),                     // the position of marker z
-              .nextEnabled(next_enabled[z]),  // the node that a particular node z thinks should be next node that is active - typically the downstream or upstream node
-              .nextStartValue(next_value[z]), // the value that this next node z thinks it should compute on next time it is enabled
+              .val(m[i]),                     // the position of marker z
+              .nextEnabled(next_enabled[i]),  // the node that a particular node z thinks should be next node that is active - typically the downstream or upstream node
+              .nextStartValue(next_value[i]), // the value that this next node z thinks it should compute on next time it is enabled
               .distances(distances),          // all observed distances between all valid markers combined 
-              .pdHash(pairdistsHash[z]),      // all observed distances between all markers and their respective predecessors
+              .pdHash(pairdistsHash[i]),      // all observed distances between all markers and their respective predecessors
               .marks_in(marks)                // all marker positions
           );
    end // for
@@ -156,7 +155,7 @@ mark_counter_leaf #(
       `NUMPOSITIONS
    ) mcFinal (
       .clock(clock),
-      .reset(RESET),
+      .reset(reset),
       .ready(individualReadiness[`NUMPOSITIONS]),
       .requestForMarkToTakeControl(requestForMarkToTakeControl),
       //.resetvalue(`NUMPOSITIONS>=`FirstVariablePosition?1'd0:fv[`NUMPOSITIONS]),
@@ -202,9 +201,7 @@ reg [2:0] state=state_init;
 
 always @(posedge clock) begin
 
-   $display("I: distances: %b",distances);
-
-   if (RESET) begin
+   if (reset) begin
 
       optiRuler[ 0]<= 0;
       optiRuler[ 1]<= 0; optiRuler[11]<= 72; optiRuler[21]<=333;
@@ -229,8 +226,9 @@ always @(posedge clock) begin
 
    end else begin
 
-      $display("I: assembly: state %d", state);
-      $display("I: assembly: m[0..4]: %0d-%0d-%0d-%0d-%0d",m[0],m[1],m[2],m[3],m[4]);
+      //$display("I: distances: %b",distances);
+      //$display("I: assembly: state %d", state);
+      //$display("I: assembly: m[0..4]: %0d-%0d-%0d-%0d-%0d",m[0],m[1],m[2],m[3],m[4]);
 
       case (state)
 

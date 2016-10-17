@@ -11,6 +11,8 @@ TOP=ogr.v
 BITSTREAM = $(patsubst %.v,%.bin,$(TOP))
 HOST      = $(patsubst %.v,%_host,$(TOP))
 
+#VALGRIND=valgrind --leak-check=full 
+
 SOURCES2=ogr.v
 
 .SUFFIXES: .v .md .html .blif
@@ -18,22 +20,17 @@ SOURCES2=ogr.v
 .md.html:
 	markdown_py $< > $@
 
+ogr.blif: cores/bla/uart.v
+
 %.blif: %.v
 	iverilog $<
-	valgrind --leak-check=full $(YOSYS) -q -p "synth_ice40 -blif $@" $<
+	$(VALGRIND) $(YOSYS) -q -p "synth_ice40 -blif $@" $<
 
 %.tiles: %.blif
 	arachne-pnr -d $(DEVICE) -p $(PCF) -o $@ $<
 
 %.bin: %.tiles
 	icepack $< $@
-
-flash: $(BITSTREAM)
-	iceprog $<
-
-run:	$(HOST)
-	sudo ./ogr_host $(PATHTODEVICE) 26 1 2 3
-
 
 ifeq (uart_adder.v,$(TOP))
 all: $(BITSTREAM) $(HOST)
@@ -42,8 +39,15 @@ all: $(BITSTREAM)
 endif
 
 
+flash: $(BITSTREAM)
+	iceprog $<
+
+run:	$(HOST)
+	sudo ./ogr_host $(PATHTODEVICE) 26 1 2 3
+
 
 testbed: mark ogr_host
+
 
 ogr:	ogr.blif ogr_host
 
