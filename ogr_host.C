@@ -196,7 +196,7 @@ main(int argc, char *argv[]) {
    fprintf(stderr,"I:    found: %d\n", output.found);
    fprintf(stderr,"I:     npos: %d\n", output.npos);
    for(unsigned char k=0; k<num_fixed_positions; k++) {
-      fprintf(stderr,"I:  pos %d: %d\n", *(output.positions+k));
+      fprintf(stderr,"I:  pos %d: %d\n", k, output.positions[k]);
    }
 
    close(USB);

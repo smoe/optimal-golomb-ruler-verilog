@@ -39,12 +39,13 @@ module top(
 	wire is_transmitting;
 	wire recv_error;
 
-	assign LED4 = recv_error;
+	reg ledval0, ledval1, ledval2, ledval3, ledval4;
+	assign {LED3, LED2, LED1, LED0} = {ledval3,ledval2,ledval1,ledval0};
+
+	assign LED4 = recv_error | is_transmitting;
 	//assign {LED3, LED2, LED1, LED0} = rx_byte[7:4];
 	//assign {LED3, LED2, LED1, LED0} = rx_byte[3:0];
 
-	reg ledval0, ledval1, ledval2, ledval3=0;
-	assign {LED3, LED2, LED1, LED0} = {ledval3,ledval2,ledval1,ledval0};
 
 
 	uart #(
@@ -115,7 +116,10 @@ module top(
             
               read_A:  begin
                   ledval0 <= 1;
+                  ledval1 <= 0;
                   ledval2 <= 0;
+                  ledval3 <= 0;
+                  ledval4 <= 0;
                   if(received) begin
                       vinput[0+:8]<=rx_byte;
                       readcount <= read_A_transition_B;
@@ -178,8 +182,8 @@ module top(
             case (writecount)
 
             write_A: begin
-           ledval2 <= 1;
-           ledval1 <= 0;
+                ledval2 <= 1;
+                ledval1 <= 1;
                 if (~ is_transmitting) begin
                     writecount      <= write_A_transit_B;
                     tx_byte         <= voutput[0+:8];
@@ -192,6 +196,9 @@ module top(
             end
 
             write_A_transit_B: begin
+               ledval3 <= 1;
+               ledval2 <= 0;
+               ledval1 <= 0;
                 if (numBitsWritten+8>outputlength) begin
                     writecount      <= write_done;
                 end else begin
@@ -203,22 +210,29 @@ module top(
             end
 
             write_B: begin
-               if (~ is_transmitting) begin
-                   writecount      <= write_A_transit_B;
-                   tx_byte         <= voutput[numBitsWritten+:8];
-                   transmit        <= 1;
-                   numBitsWritten  <= numBitsWritten+8;
-                   state           <= STATE_SENDING;
-               end
+                ledval3 <= 1;
+                ledval2 <= 1;
+                ledval1 <= 0;
+                if (~ is_transmitting) begin
+                    writecount      <= write_A_transit_B;
+                    tx_byte         <= voutput[numBitsWritten+:8];
+                    transmit        <= 1;
+                    numBitsWritten  <= numBitsWritten+8;
+                    state           <= STATE_SENDING;
+                end
             end
 
             write_done: begin
-               if (~ is_transmitting) begin
-                  writecount <= write_A; 
-                  state     <= STATE_RECEIVING;
-                  readcount <= read_A;
-                  transmit <= 0;
-               end
+                ledval3 <= 1;
+                ledval2 <= 0;
+                ledval1 <= 1;
+                transmit <= 0;
+                if (~ is_transmitting) begin
+                    writecount <= write_A; 
+                    state     <= STATE_RECEIVING;
+                    readcount <= read_A;
+                end
+
             end
 
             endcase
