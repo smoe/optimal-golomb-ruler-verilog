@@ -20,7 +20,7 @@ SOURCES2=ogr.v
 .md.html:
 	markdown_py $< > $@
 
-ogr.blif: cores/bla/uart.v
+ogr.blif: cores/osdvu/uart.v
 
 %.blif: %.v
 	iverilog $<
