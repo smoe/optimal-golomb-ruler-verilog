@@ -1,10 +1,11 @@
-DEVICE = 1k
-PCF = icestick_$(DEVICE).pcf
+#DEVICE = 1k
+DEVICE = 8k
+PCF = pinmap_$(DEVICE).pcf
 PATHTODEVICE = /dev/ttyUSB1
 
 YOSYS=/home/moeller/git/yosys/yosys
 TESTBEDS=clock_gen.v testbed.v 
-SOURCES=assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v definitions.v distance_check.v
+SOURCES=assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v definitions.v distance_check.v ogr.v
 GENSOURCES=MarkXilinx/ipcore_dir/clk0.v
 
 TOP=ogr.v
@@ -20,7 +21,9 @@ SOURCES2=ogr.v
 .md.html:
 	markdown_py $< > $@
 
-ogr.blif: cores/osdvu/uart.v
+ogr.blif: cores/osdvu/uart.v $(SOURCES)
+	iverilog $<
+	$(VALGRIND) $(YOSYS) -q -p "hierarchy -check -top top; synth_ice40 -blif $@" $(SOURCES)
 
 %.blif: %.v
 	iverilog $<
