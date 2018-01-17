@@ -1,8 +1,22 @@
 TESTBEDS=mark_counter_tb.v 
 SOURCES=mark_clock_gen.v mark_counter_assembly.v mark_counter.v mark_counter_leaf.v mark_counter_head.v
-GENSOURCES=MarkXilinx/ipcore_dir/clk0.v
+
+INCLUDE=
+MODULES=-y /Users/moeller/install/lib/ivl/ -y .
+
+all:
+	@echo "The following targets are supported:"
+	@echo ""
+	@echo "mark      - iverilog-generated executable"
+	@echo "synthesis - initiation of synthesis with iverilog"
+	@echo ""
+	@echo "mark.tgz  - generation of source tarball"
+	@echo "mark.zip  - generation of source zip" -M.
+	@echo "clean     - removal of generated files "
+
 mark: $(SOURCES)
-	iverilog -Wtimescale -o mark -s mark_counter_tb $(SOURCES) $(TESTBEDS)
+	#iverilog -Wtimescale -o mark -s mark_counter_tb $(SOURCES)
+	iverilog -Wall $(MODULES) $(INCLUDE) -o mark -s mark_counter_tb $(SOURCES) $(TESTBEDS)
 
 test: mark
 	time ./mark
