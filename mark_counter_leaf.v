@@ -1,4 +1,4 @@
-`default_nettype none
+`timescale 1ns / 1ps
 
 /**
     This module represents an individual mark. It is a special one
@@ -23,36 +23,60 @@
 
  */
 
+`include "definitions.v"
+
 module mark_counter_leaf #(
-   parameter /*[8:0]*/ LEVEL=1,
-   parameter /*[8:0]*/ MAXVALUE=500,
-   parameter /*[8:0]*/ NUMPOSITIONS=5
+   parameter [`PositionNumberBitMax:0] LEVEL=`NUMPOSITIONS
 ) (
    input wire       clock,
    input wire       reset,
    output reg       ready,
-   input wire [8:0] resetvalue,
-
-   input wire [8:0] startvalue,
-   input wire [8:0] limit, // val needs to stay below this, may shrink over time
-   input wire [6:0] enabled,
-   output reg [8:0] val, // position of mark
-   output reg [6:0] nextEnabled, // out
+   input wire       requestForMarkToTakeControl,
+   //input wire [`PositionValueBitMax:0] resetvalue,
+   input wire [`PositionValueBitMax:0] startvalue,
+   input wire [`PositionValueBitMax:0] limit, // val needs to stay below this, may shrink over time
+   input wire [`PositionNumberBitMax:0] enabled,
+   output reg [`PositionValueBitMax:0] val, // position of mark
+   output reg [`PositionNumberBitMax:0] nextEnabled, // out
                          // no nextStartValue to return
-   input wire [0:MAXVALUE] distances,
+   input wire [1:`MAXVALUE] distances,
 
-   input wire [((NUMPOSITIONS+1)*9):1] marks_in,
+   input wire [((`NUMPOSITIONS+1)*(`PositionValueBitMax+1)):1] marks_in,
    output reg success // out
 );
 
-reg good;
-reg [6:0] i;
-reg [8:0] d;
+wire good;  // indicator if a Golomb Ruler was found
+reg [`PositionNumberBitMax:0] i; // iterator checking distances
+reg [`PositionValueBitMax:0] d; // temporary variable holding distance
 
-// interim distances in leaf, not sent back as output
-reg [0:MAXVALUE] pdHash;
+// interim distances in leaf, not sent back as output, only the good flag is required
+wire [1:`MAXVALUE] pdHash=0; // not needed
 
-reg [8:0] m[0:NUMPOSITIONS];
+reg distance_check_start_compute = 0;
+wire distance_check_results_ready;
+
+distance_check #(.LEVEL(LEVEL)) dc (
+	.clock(clock),
+        .reset(reset),
+        .distances(distances),
+        .pdHash(pdHash),
+		  .limit(limit),
+        .marks_in(marks_in),
+        .val(val),
+        .startCompute(distance_check_start_compute),
+        .resultsReady(distance_check_results_ready),
+        .good(good)
+);
+
+
+localparam state_idle = 0;
+localparam state_updatePositions = 1;
+localparam state_earlyValueCheck = 2;
+localparam state_waitForDistanceCheck = 3;
+localparam state_backtrack = 4;
+localparam state_done = 6;
+reg [2:0] state = state_idle;
+
 
 reg carry;
 
@@ -61,82 +85,97 @@ always @(posedge clock) begin
 
    if (reset) begin
 
-      $display("I(%0d): Reset of mark counter (leaf), val=%0d, startvalue=%0d",LEVEL,val, startvalue);
-      val=resetvalue;
-      good=0;
-      success=0;
-      nextEnabled=enabled; // calling routine knows what is right
+      $display("I(%0d == LEAF): Reset of mark counter (leaf), val=%0d, resetvalue=%0d, startvalue=%0d",
+		      LEVEL,val,`ResetPosition,startvalue);
+      val<=`ResetPosition;
+      success <= 0;
+      nextEnabled <= enabled; // calling routine knows what is right
       ready <= 1;
+      state <= state_idle;
 		
-   end else if (1==clock) begin
+   end else begin
 
-      ready <= 0;
+      case (state)
 
-      if (enabled==LEVEL) begin
+         state_idle: begin
 
-         success=0; // new value to be assigned to m, yet untested
-
-         {m[0],m[1],m[2],m[3],m[4],m[5]}=marks_in; // extend to include m[NUMPOSITIONS]
-			
-         //$display("I(%0d): Enabled mark counter (leaf), val=%0d, startvalue=%0d",LEVEL,val,startvalue);
-         // setting value
-         if (0==val) begin
-            val = startvalue;
-         end else begin
-            {carry,val} = val+1'b1;
-         end
-			
-			
-         // checking if value is within constraint
-         if (val<=limit) begin
-				
-            pdHash=0;
-            good=1;
-            /**/
-            for(i=1; good && i<LEVEL; i=i+1'b1) begin
-               d = val - m[i];
-               if (0 != distances[d]) begin
-	          //$display("I(%0d): distance clash with earlier distances at %0d (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  good=1'b0;
-               end else	if (0 != pdHash[d]) begin
-                  //$display("W(%0d): distance clash at %0d with current distances - how can this be (i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  good=1'b0;
-               end else begin
-                  //$display("I(%0d): distance set (d=%0d,i=%0d,val=%0d,m[i]=%0d)",LEVEL,d,i,val,m[i]);
-                  pdHash[d] = 1'b1; // not required for leaf
-               end
-            end
-            /**/
-
-            /*
-	    // Optional display of internal state
-            if (good) begin
-               // we can continue
-               $display("I(%0d): ** action, val==%0d (leaf)",LEVEL, val);
+            if (enabled == LEVEL && requestForMarkToTakeControl) begin
+               $display("I(%0d == LEAF): Enabled mark counter, val=%0d, startvalue=%0d",LEVEL,val,startvalue);
+               ready <= 1'b0;
+   	       success <= 0; // new value to be assigned to m, yet untested
+               state <= state_updatePositions;
             end else begin
-               // no action since conflicts with distances
-               $display("I(%0d): NO action, val==%0d (leaf)",LEVEL, val);
+               ready <= 1'b1;
             end
-	    */
-            success=good; // here see a single change of 'return value'
-				
-            nextEnabled = LEVEL; // we stay at this module if tests fail or not
-
-         end else begin
-            // we have reached beyond the limit and thus have to find better
-            // values at th earlier marks
-            nextEnabled = LEVEL-1'b1;
-            //$display("I(%0d): action, val==%0d (leaf), level up to %d",LEVEL, val, nextEnabled);
-            val=0;
+         
          end
 
-         //$display("I(%0d): val=%0d, nextEnabled == %0d (leaf)",LEVEL,val,nextEnabled);
-			
-         m[LEVEL]=val; // this is the current mark and thus communicated to the assembly module.
-		
-      end
+         state_updatePositions: begin
 
-      ready <= 1;
+            $display("I(%0d == LEAF): distances:  %b",LEVEL,distances);
+            // setting value
+            if (`ResetPosition == val) begin
+               val <= startvalue;
+               $display("I(%0d == LEAF): val was at ResetPosition, now occupying startvalue==%0d",LEVEL,startvalue);
+            end else begin
+               {carry,val} <= val+3'd1;
+               $display("I(%0d == LEAF): regular interim val, now increased val by one to %0d",LEVEL,val);
+            end
+         
+            $display("I(%0d == LEAF): Updated mark counter, val=%0d, startvalue=%0d",
+                   LEVEL,val,startvalue);
+
+            state <= state_earlyValueCheck;
+
+         end
+
+         state_earlyValueCheck: begin
+            if (val <= limit) begin // <= since leaf
+               distance_check_start_compute <=  1;
+               if (~distance_check_results_ready) begin
+                  state <= state_waitForDistanceCheck;
+               end
+            end else begin
+               state <= state_backtrack;
+            end
+         end
+
+         state_waitForDistanceCheck: begin
+            distance_check_start_compute <=  0;
+            if (distance_check_results_ready) begin
+               success <= good;
+	       if (good) begin
+                  state <= state_done;
+                  //state <= state_backtrack;
+               end else begin
+                  // we skip this value and try the next because of distance clash
+                  $display("I(%0d): distance clash, val==%0d, nextEnabled=%0d", LEVEL, val, nextEnabled);
+                  // FIXME we should check that pdHash is indeed 0
+                  nextEnabled <= LEVEL;
+                  state <= state_done;
+               end
+            end  
+         end
+
+         state_backtrack: begin
+            // the module "above" needs to address this
+            $display("I(%0d): level-up, val==%0d -> 0",LEVEL, val);
+            if (0 == nextEnabled) begin
+              $display("I: LEVEL 0 is next enabled. This better be the end.");
+              //$finish();
+            end
+            {carry,nextEnabled} <= enabled-1'b1;
+            val <= `ResetPosition;
+            //$display(pdHash); // FIXME a test that pdHash is 0 here may be good
+            state <= state_done;
+         end
+
+         state_done: begin
+            ready <= 1;
+            state <= state_idle;
+         end
+
+      endcase
 
    end
 	
